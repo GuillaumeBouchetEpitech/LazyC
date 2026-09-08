@@ -1,0 +1,22 @@
+[MATCH:START]
+  totalNodes=2
+    node[0]: "name"
+      start: (62) L6_C4
+      end:   (66) L6_C8
+      [CONTENT]main[/CONTENT]
+    node[1]: "params"
+      start: (66) L6_C8
+      end:   (89) L6_C31
+      [CONTENT](int argc, char** argv)[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=2
+    node[0]: "name"
+      start: (136) L12_C5
+      end:   (143) L12_C12
+      [CONTENT]my_func[/CONTENT]
+    node[1]: "params"
+      start: (143) L12_C12
+      end:   (145) L12_C14
+      [CONTENT]()[/CONTENT]
+[MATCH:END]

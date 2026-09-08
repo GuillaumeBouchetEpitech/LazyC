@@ -1,0 +1,12 @@
+
+#include <stdlib.h>
+#include <stdio.h>
+
+///comptime-lazy-c: "text-replace" "LOOOOOL" "LOLOLOL"
+///comptime-lazy-c: "resolve-includes" "int"
+
+int main(int argc, char **argv)
+{
+  printf("Hello World!");
+  return EXIT_SUCCESS;
+}

@@ -1,0 +1,49 @@
+
+export struct Vec3
+{
+  float x;
+  float y;
+  float z;
+};
+
+export void Vec3__set(Vec3* self, float x, float y, float z)
+{
+  self->x = x;
+  self->y = y;
+  self->z = z;
+}
+
+// impl Vec3 {
+
+//   export Vec3 create(float x, float y, float z) {
+//     return Vec3{
+//       x: x,
+//       y: y,
+//       z: z,
+//     };
+//   }
+//   // export Vec3* add(Vec3* result, Vec3* left, Vec3* right) {
+//   //   result->x = left->x + right->x;
+//   //   result->y = left->y + right->y;
+//   //   result->z = left->z + right->z;
+//   //   return result;
+//   // }
+//   // export Vec3* sub(Vec3* result, Vec3* left, Vec3* right) {
+//   //   result->x = left->x - right->x;
+//   //   result->y = left->y - right->y;
+//   //   result->z = left->z - right->z;
+//   //   return result;
+//   // }
+//   // export Vec3* mul(Vec3* result, Vec3* left, Vec3* right) {
+//   //   result->x = left->x * right->x;
+//   //   result->y = left->y * right->y;
+//   //   result->z = left->z * right->z;
+//   //   return result;
+//   // }
+//   // export Vec3* div(Vec3* result, Vec3* left, Vec3* right) {
+//   //   result->x = left->x / right->x;
+//   //   result->y = left->y / right->y;
+//   //   result->z = left->z / right->z;
+//   //   return result;
+//   // }
+// };

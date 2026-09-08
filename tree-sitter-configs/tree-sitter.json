@@ -1,0 +1,42 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "lazyc",
+      "camelcase": "LazyC",
+      "title": "Lazy-C",
+      "scope": "source.lazyc",
+      "file-types": [
+        "lc"
+      ],
+      "injection-regex": "^lazyc$",
+      "class-name": "TreeSitterLazyc"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "BSD",
+    "description": "Lazy-C",
+    "authors": [
+      {
+        "name": "barbie_geek",
+        "email": "gbouchet7@gmail.com",
+        "url": ""
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/tree-sitter/tree-sitter-lazyc",
+      "funding": ""
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": false,
+    "java": false,
+    "node": false,
+    "python": false,
+    "rust": false,
+    "swift": false,
+    "zig": false
+  }
+}

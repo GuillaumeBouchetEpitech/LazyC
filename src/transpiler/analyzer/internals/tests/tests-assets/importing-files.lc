@@ -1,0 +1,14 @@
+
+
+// the files don't exist -> we're just testing how it is analyzed/indexed
+#include "./lol/mdr.h"
+#include "./omg.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+
+int main(int argc, char **argv)
+{
+  printf("Hello World!");
+  return EXIT_SUCCESS;
+}

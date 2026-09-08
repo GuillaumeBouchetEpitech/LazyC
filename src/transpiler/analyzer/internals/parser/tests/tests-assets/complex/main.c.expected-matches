@@ -1,0 +1,719 @@
+[MATCH:START]
+  totalNodes=2
+    node[0]: "import"
+      start: (15) L3_C0
+      end:   (35) L4_C0
+      [CONTENT]#include <stdlib.h>
+[/CONTENT]
+    node[1]: "import.source"
+      start: (24) L3_C9
+      end:   (34) L3_C19
+      [CONTENT]<stdlib.h>[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=2
+    node[0]: "import"
+      start: (35) L4_C0
+      end:   (71) L5_C0
+      [CONTENT]#include "some-fake-include-file.h"
+[/CONTENT]
+    node[1]: "import.source"
+      start: (44) L4_C9
+      end:   (70) L4_C35
+      [CONTENT]"some-fake-include-file.h"[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=2
+    node[0]: "definition.macro"
+      start: (72) L6_C0
+      end:   (122) L7_C0
+      [CONTENT]#define D_MYLOG(msg) printf("[MYLOG] %s\n", msg);
+[/CONTENT]
+    node[1]: "name"
+      start: (80) L6_C8
+      end:   (87) L6_C15
+      [CONTENT]D_MYLOG[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=2
+    node[0]: "definition.macro"
+      start: (122) L7_C0
+      end:   (145) L8_C0
+      [CONTENT]#define D_TEST_VAR 777
+[/CONTENT]
+    node[1]: "name"
+      start: (130) L7_C8
+      end:   (140) L7_C18
+      [CONTENT]D_TEST_VAR[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "definition.struct"
+      start: (178) L10_C0
+      end:   (240) L14_C1
+      [CONTENT]export struct MyStruct
+{
+  int integerVal;
+  float floatVal;
+}[/CONTENT]
+    node[1]: "name"
+      start: (192) L10_C14
+      end:   (200) L10_C22
+      [CONTENT]MyStruct[/CONTENT]
+    node[2]: "field_declaration_list"
+      start: (201) L11_C0
+      end:   (240) L14_C1
+      [CONTENT]{
+  int integerVal;
+  float floatVal;
+}[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "definition.struct.field"
+      start: (205) L12_C2
+      end:   (220) L12_C17
+      [CONTENT]int integerVal;[/CONTENT]
+    node[1]: "type"
+      start: (205) L12_C2
+      end:   (208) L12_C5
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (209) L12_C6
+      end:   (219) L12_C16
+      [CONTENT]integerVal[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "definition.struct.field"
+      start: (223) L13_C2
+      end:   (238) L13_C17
+      [CONTENT]float floatVal;[/CONTENT]
+    node[1]: "type"
+      start: (223) L13_C2
+      end:   (228) L13_C7
+      [CONTENT]float[/CONTENT]
+    node[2]: "name"
+      start: (229) L13_C8
+      end:   (237) L13_C16
+      [CONTENT]floatVal[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=2
+    node[0]: "definition.enum"
+      start: (243) L16_C0
+      end:   (290) L20_C1
+      [CONTENT]export enum MyEnum
+{
+  EnnumValA,
+  EnnumValB
+}[/CONTENT]
+    node[1]: "name"
+      start: (255) L16_C12
+      end:   (261) L16_C18
+      [CONTENT]MyEnum[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=2
+    node[0]: "definition.union"
+      start: (293) L22_C0
+      end:   (353) L26_C1
+      [CONTENT]export union MyUnion
+{
+  int unionValA;
+  float unionValB;
+}[/CONTENT]
+    node[1]: "name"
+      start: (306) L22_C13
+      end:   (313) L22_C20
+      [CONTENT]MyUnion[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "definition.struct.field"
+      start: (318) L24_C2
+      end:   (332) L24_C16
+      [CONTENT]int unionValA;[/CONTENT]
+    node[1]: "type"
+      start: (318) L24_C2
+      end:   (321) L24_C5
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (322) L24_C6
+      end:   (331) L24_C15
+      [CONTENT]unionValA[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "definition.struct.field"
+      start: (335) L25_C2
+      end:   (351) L25_C18
+      [CONTENT]float unionValB;[/CONTENT]
+    node[1]: "type"
+      start: (335) L25_C2
+      end:   (340) L25_C7
+      [CONTENT]float[/CONTENT]
+    node[2]: "name"
+      start: (341) L25_C8
+      end:   (350) L25_C17
+      [CONTENT]unionValB[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=2
+    node[0]: "definition.typedef"
+      start: (356) L28_C0
+      end:   (396) L28_C40
+      [CONTENT]export typedef struct MyStruct MyStruct;[/CONTENT]
+    node[1]: "name"
+      start: (387) L28_C31
+      end:   (395) L28_C39
+      [CONTENT]MyStruct[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "signature.function"
+      start: (412) L31_C0
+      end:   (453) L31_C41
+      [CONTENT]void voidReturnFuncSignature(int param1);[/CONTENT]
+    node[1]: "return.type"
+      start: (412) L31_C0
+      end:   (416) L31_C4
+      [CONTENT]void[/CONTENT]
+    node[2]: "name"
+      start: (417) L31_C5
+      end:   (440) L31_C28
+      [CONTENT]voidReturnFuncSignature[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "declaration.variable"
+      start: (441) L31_C29
+      end:   (451) L31_C39
+      [CONTENT]int param1[/CONTENT]
+    node[1]: "type"
+      start: (441) L31_C29
+      end:   (444) L31_C32
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (445) L31_C33
+      end:   (451) L31_C39
+      [CONTENT]param1[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "signature.function"
+      start: (454) L32_C0
+      end:   (497) L32_C43
+      [CONTENT]int integerReturnFuncSignature(int param1);[/CONTENT]
+    node[1]: "return.type"
+      start: (454) L32_C0
+      end:   (457) L32_C3
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (458) L32_C4
+      end:   (484) L32_C30
+      [CONTENT]integerReturnFuncSignature[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "declaration.variable"
+      start: (485) L32_C31
+      end:   (495) L32_C41
+      [CONTENT]int param1[/CONTENT]
+    node[1]: "type"
+      start: (485) L32_C31
+      end:   (488) L32_C34
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (489) L32_C35
+      end:   (495) L32_C41
+      [CONTENT]param1[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=4
+    node[0]: "signature.function"
+      start: (498) L33_C0
+      end:   (541) L33_C43
+      [CONTENT]int *intPtrReturnFuncSignature(int param1);[/CONTENT]
+    node[1]: "return.type"
+      start: (498) L33_C0
+      end:   (501) L33_C3
+      [CONTENT]int[/CONTENT]
+    node[2]: "pointer.level"
+      start: (502) L33_C4
+      end:   (503) L33_C5
+      [CONTENT]*[/CONTENT]
+    node[3]: "name"
+      start: (503) L33_C5
+      end:   (528) L33_C30
+      [CONTENT]intPtrReturnFuncSignature[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "declaration.variable"
+      start: (529) L33_C31
+      end:   (539) L33_C41
+      [CONTENT]int param1[/CONTENT]
+    node[1]: "type"
+      start: (529) L33_C31
+      end:   (532) L33_C34
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (533) L33_C35
+      end:   (539) L33_C41
+      [CONTENT]param1[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=5
+    node[0]: "signature.function"
+      start: (542) L34_C0
+      end:   (589) L34_C47
+      [CONTENT]int **intPtrPtrReturnFuncSignature(int param1);[/CONTENT]
+    node[1]: "return.type"
+      start: (542) L34_C0
+      end:   (545) L34_C3
+      [CONTENT]int[/CONTENT]
+    node[2]: "pointer.level"
+      start: (546) L34_C4
+      end:   (547) L34_C5
+      [CONTENT]*[/CONTENT]
+    node[3]: "pointer.level2"
+      start: (547) L34_C5
+      end:   (548) L34_C6
+      [CONTENT]*[/CONTENT]
+    node[4]: "name"
+      start: (548) L34_C6
+      end:   (576) L34_C34
+      [CONTENT]intPtrPtrReturnFuncSignature[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "declaration.variable"
+      start: (577) L34_C35
+      end:   (587) L34_C45
+      [CONTENT]int param1[/CONTENT]
+    node[1]: "type"
+      start: (577) L34_C35
+      end:   (580) L34_C38
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (581) L34_C39
+      end:   (587) L34_C45
+      [CONTENT]param1[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=4
+    node[0]: "definition.function"
+      start: (591) L36_C0
+      end:   (923) L51_C1
+      [CONTENT]int main()
+{
+
+  int integerVar = 666;
+  float floatVar = 666.666f;
+  float *floatPtr1 = &floatVar;
+  float **floatPtr2 = &floatPtr1;
+  float ***floatPtr3 = &floatPtr2;
+
+  voidReturnFuncSignature(777);
+  integerReturnFuncSignature(777);
+  intPtrReturnFuncSignature(777);
+  intPtrPtrReturnFuncSignature(777);
+
+  return EXIT_SUCCESS;
+}[/CONTENT]
+    node[1]: "return.type"
+      start: (591) L36_C0
+      end:   (594) L36_C3
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (595) L36_C4
+      end:   (599) L36_C8
+      [CONTENT]main[/CONTENT]
+    node[3]: "body"
+      start: (602) L37_C0
+      end:   (923) L51_C1
+      [CONTENT]{
+
+  int integerVar = 666;
+  float floatVar = 666.666f;
+  float *floatPtr1 = &floatVar;
+  float **floatPtr2 = &floatPtr1;
+  float ***floatPtr3 = &floatPtr2;
+
+  voidReturnFuncSignature(777);
+  integerReturnFuncSignature(777);
+  intPtrReturnFuncSignature(777);
+  intPtrPtrReturnFuncSignature(777);
+
+  return EXIT_SUCCESS;
+}[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=1
+    node[0]: "block.scope"
+      start: (602) L37_C0
+      end:   (923) L51_C1
+      [CONTENT]{
+
+  int integerVar = 666;
+  float floatVar = 666.666f;
+  float *floatPtr1 = &floatVar;
+  float **floatPtr2 = &floatPtr1;
+  float ***floatPtr3 = &floatPtr2;
+
+  voidReturnFuncSignature(777);
+  integerReturnFuncSignature(777);
+  intPtrReturnFuncSignature(777);
+  intPtrPtrReturnFuncSignature(777);
+
+  return EXIT_SUCCESS;
+}[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=4
+    node[0]: "declaration.variable"
+      start: (607) L39_C2
+      end:   (628) L39_C23
+      [CONTENT]int integerVar = 666;[/CONTENT]
+    node[1]: "type"
+      start: (607) L39_C2
+      end:   (610) L39_C5
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (611) L39_C6
+      end:   (621) L39_C16
+      [CONTENT]integerVar[/CONTENT]
+    node[3]: "body"
+      start: (624) L39_C19
+      end:   (627) L39_C22
+      [CONTENT]666[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=4
+    node[0]: "declaration.variable"
+      start: (631) L40_C2
+      end:   (657) L40_C28
+      [CONTENT]float floatVar = 666.666f;[/CONTENT]
+    node[1]: "type"
+      start: (631) L40_C2
+      end:   (636) L40_C7
+      [CONTENT]float[/CONTENT]
+    node[2]: "name"
+      start: (637) L40_C8
+      end:   (645) L40_C16
+      [CONTENT]floatVar[/CONTENT]
+    node[3]: "body"
+      start: (648) L40_C19
+      end:   (656) L40_C27
+      [CONTENT]666.666f[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "declaration.pointer"
+      start: (660) L41_C2
+      end:   (689) L41_C31
+      [CONTENT]float *floatPtr1 = &floatVar;[/CONTENT]
+    node[1]: "type"
+      start: (660) L41_C2
+      end:   (665) L41_C7
+      [CONTENT]float[/CONTENT]
+    node[2]: "pointer"
+      start: (666) L41_C8
+      end:   (676) L41_C18
+      [CONTENT]*floatPtr1[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "declaration.pointer"
+      start: (692) L42_C2
+      end:   (723) L42_C33
+      [CONTENT]float **floatPtr2 = &floatPtr1;[/CONTENT]
+    node[1]: "type"
+      start: (692) L42_C2
+      end:   (697) L42_C7
+      [CONTENT]float[/CONTENT]
+    node[2]: "pointer"
+      start: (698) L42_C8
+      end:   (709) L42_C19
+      [CONTENT]**floatPtr2[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "declaration.pointer"
+      start: (726) L43_C2
+      end:   (758) L43_C34
+      [CONTENT]float ***floatPtr3 = &floatPtr2;[/CONTENT]
+    node[1]: "type"
+      start: (726) L43_C2
+      end:   (731) L43_C7
+      [CONTENT]float[/CONTENT]
+    node[2]: "pointer"
+      start: (732) L43_C8
+      end:   (744) L43_C20
+      [CONTENT]***floatPtr3[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "call"
+      start: (762) L45_C2
+      end:   (790) L45_C30
+      [CONTENT]voidReturnFuncSignature(777)[/CONTENT]
+    node[1]: "call.name"
+      start: (762) L45_C2
+      end:   (785) L45_C25
+      [CONTENT]voidReturnFuncSignature[/CONTENT]
+    node[2]: "call.args"
+      start: (785) L45_C25
+      end:   (790) L45_C30
+      [CONTENT](777)[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "call"
+      start: (794) L46_C2
+      end:   (825) L46_C33
+      [CONTENT]integerReturnFuncSignature(777)[/CONTENT]
+    node[1]: "call.name"
+      start: (794) L46_C2
+      end:   (820) L46_C28
+      [CONTENT]integerReturnFuncSignature[/CONTENT]
+    node[2]: "call.args"
+      start: (820) L46_C28
+      end:   (825) L46_C33
+      [CONTENT](777)[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "call"
+      start: (829) L47_C2
+      end:   (859) L47_C32
+      [CONTENT]intPtrReturnFuncSignature(777)[/CONTENT]
+    node[1]: "call.name"
+      start: (829) L47_C2
+      end:   (854) L47_C27
+      [CONTENT]intPtrReturnFuncSignature[/CONTENT]
+    node[2]: "call.args"
+      start: (854) L47_C27
+      end:   (859) L47_C32
+      [CONTENT](777)[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "call"
+      start: (863) L48_C2
+      end:   (896) L48_C35
+      [CONTENT]intPtrPtrReturnFuncSignature(777)[/CONTENT]
+    node[1]: "call.name"
+      start: (863) L48_C2
+      end:   (891) L48_C30
+      [CONTENT]intPtrPtrReturnFuncSignature[/CONTENT]
+    node[2]: "call.args"
+      start: (891) L48_C30
+      end:   (896) L48_C35
+      [CONTENT](777)[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "declaration.variable"
+      start: (969) L54_C29
+      end:   (979) L54_C39
+      [CONTENT]int param1[/CONTENT]
+    node[1]: "type"
+      start: (969) L54_C29
+      end:   (972) L54_C32
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (973) L54_C33
+      end:   (979) L54_C39
+      [CONTENT]param1[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=4
+    node[0]: "definition.function"
+      start: (940) L54_C0
+      end:   (994) L57_C1
+      [CONTENT]void voidReturnFuncSignature(int param1)
+{
+  return;
+}[/CONTENT]
+    node[1]: "return.type"
+      start: (940) L54_C0
+      end:   (944) L54_C4
+      [CONTENT]void[/CONTENT]
+    node[2]: "name"
+      start: (945) L54_C5
+      end:   (968) L54_C28
+      [CONTENT]voidReturnFuncSignature[/CONTENT]
+    node[3]: "body"
+      start: (981) L55_C0
+      end:   (994) L57_C1
+      [CONTENT]{
+  return;
+}[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=1
+    node[0]: "block.scope"
+      start: (981) L55_C0
+      end:   (994) L57_C1
+      [CONTENT]{
+  return;
+}[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "declaration.variable"
+      start: (1026) L58_C31
+      end:   (1036) L58_C41
+      [CONTENT]int param1[/CONTENT]
+    node[1]: "type"
+      start: (1026) L58_C31
+      end:   (1029) L58_C34
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (1030) L58_C35
+      end:   (1036) L58_C41
+      [CONTENT]param1[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=4
+    node[0]: "definition.function"
+      start: (995) L58_C0
+      end:   (1053) L61_C1
+      [CONTENT]int integerReturnFuncSignature(int param1)
+{
+  return 0;
+}[/CONTENT]
+    node[1]: "return.type"
+      start: (995) L58_C0
+      end:   (998) L58_C3
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (999) L58_C4
+      end:   (1025) L58_C30
+      [CONTENT]integerReturnFuncSignature[/CONTENT]
+    node[3]: "body"
+      start: (1038) L59_C0
+      end:   (1053) L61_C1
+      [CONTENT]{
+  return 0;
+}[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=1
+    node[0]: "block.scope"
+      start: (1038) L59_C0
+      end:   (1053) L61_C1
+      [CONTENT]{
+  return 0;
+}[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "declaration.variable"
+      start: (1085) L62_C31
+      end:   (1095) L62_C41
+      [CONTENT]int param1[/CONTENT]
+    node[1]: "type"
+      start: (1085) L62_C31
+      end:   (1088) L62_C34
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (1089) L62_C35
+      end:   (1095) L62_C41
+      [CONTENT]param1[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=5
+    node[0]: "definition.function"
+      start: (1054) L62_C0
+      end:   (1115) L65_C1
+      [CONTENT]int *intPtrReturnFuncSignature(int param1)
+{
+  return NULL;
+}[/CONTENT]
+    node[1]: "return.type"
+      start: (1054) L62_C0
+      end:   (1057) L62_C3
+      [CONTENT]int[/CONTENT]
+    node[2]: "pointer.level"
+      start: (1058) L62_C4
+      end:   (1059) L62_C5
+      [CONTENT]*[/CONTENT]
+    node[3]: "name"
+      start: (1059) L62_C5
+      end:   (1084) L62_C30
+      [CONTENT]intPtrReturnFuncSignature[/CONTENT]
+    node[4]: "body"
+      start: (1097) L63_C0
+      end:   (1115) L65_C1
+      [CONTENT]{
+  return NULL;
+}[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=1
+    node[0]: "block.scope"
+      start: (1097) L63_C0
+      end:   (1115) L65_C1
+      [CONTENT]{
+  return NULL;
+}[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=3
+    node[0]: "declaration.variable"
+      start: (1151) L66_C35
+      end:   (1161) L66_C45
+      [CONTENT]int param1[/CONTENT]
+    node[1]: "type"
+      start: (1151) L66_C35
+      end:   (1154) L66_C38
+      [CONTENT]int[/CONTENT]
+    node[2]: "name"
+      start: (1155) L66_C39
+      end:   (1161) L66_C45
+      [CONTENT]param1[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=6
+    node[0]: "definition.function"
+      start: (1116) L66_C0
+      end:   (1181) L69_C1
+      [CONTENT]int **intPtrPtrReturnFuncSignature(int param1)
+{
+  return NULL;
+}[/CONTENT]
+    node[1]: "return.type"
+      start: (1116) L66_C0
+      end:   (1119) L66_C3
+      [CONTENT]int[/CONTENT]
+    node[2]: "pointer.level"
+      start: (1120) L66_C4
+      end:   (1121) L66_C5
+      [CONTENT]*[/CONTENT]
+    node[3]: "pointer.level2"
+      start: (1121) L66_C5
+      end:   (1122) L66_C6
+      [CONTENT]*[/CONTENT]
+    node[4]: "name"
+      start: (1122) L66_C6
+      end:   (1150) L66_C34
+      [CONTENT]intPtrPtrReturnFuncSignature[/CONTENT]
+    node[5]: "body"
+      start: (1163) L67_C0
+      end:   (1181) L69_C1
+      [CONTENT]{
+  return NULL;
+}[/CONTENT]
+[MATCH:END]
+[MATCH:START]
+  totalNodes=1
+    node[0]: "block.scope"
+      start: (1163) L67_C0
+      end:   (1181) L69_C1
+      [CONTENT]{
+  return NULL;
+}[/CONTENT]
+[MATCH:END]

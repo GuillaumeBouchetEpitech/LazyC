@@ -1,0 +1,12 @@
+
+#include "./sub-folder/sub-file-a.lc"
+#include "./sub-folder/sub-file-b.lc"
+
+#include <stdlib.h>
+
+int main(int argc, char **argv)
+{
+  my_intermediate_A();
+  my_intermediate_B();
+  return EXIT_SUCCESS;
+}

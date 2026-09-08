@@ -1,0 +1,11 @@
+
+#include <stdio.h>
+
+///comptime-lazy-c: "text-replace" "LOOOOOL" "LOLOLOL"
+///comptime-lazy-c: "resolve-includes" "int"
+
+export void my_func()
+{
+  const char* msg = "World";
+  printf("Hello %s!\n", msg);
+}

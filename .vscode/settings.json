@@ -1,0 +1,16 @@
+{
+  "files.associations": {
+    "*.lc": "c"
+  },
+  "cSpell.words": [
+    "comptime"
+  ],
+  "C_Cpp.files.exclude": {
+    "/": true,
+    "**/.vscode": true,
+    "**/node_modules": true,
+    "**/.vs": true,
+    "**/.git": true
+  },
+  "C_Cpp.exclusionPolicy": "checkFilesAndFolders",
+}

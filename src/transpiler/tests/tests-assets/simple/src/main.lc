@@ -1,0 +1,13 @@
+
+#include "./sub-folder/sub-file.lc"
+#include "./test-about-vec3/test-about-vec3.lc"
+
+#include <stdlib.h>
+#include <stdio.h>
+
+int main(int argc, char **argv)
+{
+  my_func();
+  test_about_vec3();
+  return EXIT_SUCCESS;
+}

@@ -1,0 +1,18 @@
+
+
+third_parties
+cmake-build.*
+
+bin
+output
+.generated
+*.debug
+*.actual-matches
+# *.test.scope
+# *.test.tree
+*.tree
+*.actual-sorted-dep
+
+
+TODO.md
+

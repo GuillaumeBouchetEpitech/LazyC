@@ -1,0 +1,104 @@
+
+
+
+; includes
+
+(preproc_include path: (_) @import.source) @import
+
+
+
+; Macros
+
+; macro function
+(preproc_function_def name: (identifier) @name) @definition.macro
+; macro var declaration
+(preproc_def name: (identifier) @name) @definition.macro
+
+
+
+; Structs, Unions, Enums, Typedefs
+
+(struct_specifier name: (type_identifier) @name templated_type: (type_identifier)? @templated.type (field_declaration_list) @field_declaration_list ) @definition.struct
+(union_specifier name: (type_identifier) @name) @definition.union
+(enum_specifier name: (type_identifier) @name) @definition.enum
+(type_definition declarator: (type_identifier) @name) @definition.typedef
+
+; Struct field declaration
+(field_declaration (_) @type (field_identifier) @name) @definition.struct.field
+
+
+
+; functions signatures
+
+(declaration type: (_) @return.type
+  declarator: [
+    (
+      function_declarator declarator: (identifier) @name)
+    (pointer_declarator ("*") @pointer.level declarator: (
+      function_declarator declarator: (identifier) @name))
+    (pointer_declarator ("*") @pointer.level declarator: (pointer_declarator ("*") @pointer.level2 declarator: (
+      function_declarator declarator: (identifier) @name)))
+    (pointer_declarator ("*") @pointer.level declarator: (pointer_declarator ("*") @pointer.level2 (pointer_declarator ("*") @pointer.level3 declarator: (
+      function_declarator declarator: (identifier) @name))))
+  ]
+) @signature.function
+
+
+
+; functions definitions (1)
+
+(function_definition ("export")? @exported ("comptime")? @comptime ("test")? @test type: (_) @return.type
+  declarator: [
+    (
+      function_declarator declarator: (identifier) @name)
+    (pointer_declarator ("*") @pointer.level declarator: (
+      function_declarator declarator: (identifier) @name))
+    (pointer_declarator ("*") @pointer.level declarator: (pointer_declarator ("*") @pointer.level2 declarator: (
+      function_declarator declarator: (identifier) @name)))
+    (pointer_declarator ("*") @pointer.level declarator: (pointer_declarator ("*") @pointer.level2 (pointer_declarator ("*") @pointer.level3 declarator: (
+      function_declarator declarator: (identifier) @name))))
+  ]
+  (_) @body) @definition.function
+
+; functions definitions (2)
+
+(declaration ("export")? @exported ("comptime")? @comptime ("test")? @test type: (_) @return.type
+  declarator: [
+    (
+      function_declarator declarator: (identifier) @name)
+    (pointer_declarator ("*") @pointer.level declarator: (
+      function_declarator declarator: (identifier) @name))
+    (pointer_declarator ("*") @pointer.level declarator: (pointer_declarator ("*") @pointer.level2 declarator: (
+      function_declarator declarator: (identifier) @name)))
+    (pointer_declarator ("*") @pointer.level declarator: (pointer_declarator ("*") @pointer.level2 (pointer_declarator ("*") @pointer.level3 declarator: (
+      function_declarator declarator: (identifier) @name))))
+  ]
+  (_) @body) @definition.function
+
+
+
+; Calls
+
+(call_expression function: ((identifier) @call.name (_) @call.args)) @call
+(call_expression function: (field_expression field: (field_identifier) @call.name) ((_) @call.args) ) @call
+
+; Call parameters
+
+(parameter_declaration (_) @type (identifier) @name (_)? @body) @declaration.variable
+(parameter_declaration (_) @type (pointer_declarator)+ @pointer) @declaration.pointer
+
+
+
+; Variables declaration
+
+(declaration (_) @type (identifier) @name (_)? @body) @declaration.variable
+(declaration (_) @type (init_declarator (identifier) @name (_)? @body)) @declaration.variable
+(declaration (_) @type (init_declarator (pointer_declarator)+ @pointer)) @declaration.pointer
+
+
+
+; block scopes
+
+(compound_statement) @block.scope
+
+

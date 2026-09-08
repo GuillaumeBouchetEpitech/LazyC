@@ -1,0 +1,7 @@
+
+#include "./sub-sub-folder-b/sub-sub-file-b.lc"
+
+export void my_intermediate_B()
+{
+  my_func_B();
+}

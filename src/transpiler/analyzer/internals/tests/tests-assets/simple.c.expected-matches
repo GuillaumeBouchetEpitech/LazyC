@@ -1,0 +1,10 @@
+IMPORTS (total: 0)
+TEXTS_TO_REPLACE (total: 0)
+TYPES_TO_RESOLVE (total: 0)
+|--- [L1_C0]->[L9_C0] [ROOT_SCOPE]
+|---|--- [L4_C0]->[L8_C1] [FUNC_SCOPE] ---> "main"
+=-=-=-=- => [L4_C9]->[L4_C17]  -> VarDef: type="int", ptrLvl="0", name="argc"
+=-=-=-=- => [L4_C19]->[L4_C30]  -> VarDef: type="char", ptrLvl="2", name="argv"
+|---|---|--- [L5_C0]->[L8_C1] [BLOCK_SCOPE]
+=-=-=-=-=-=- => [L6_C2]->[L6_C24]  -> FunCall: name="printf"
+=-=-=-=-=-=- => [L7_C9]->[L7_C21]  -> VarRef: name="EXIT_SUCCESS"
