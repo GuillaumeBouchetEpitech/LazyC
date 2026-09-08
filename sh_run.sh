@@ -100,10 +100,18 @@ cmake -B ./cmake-build.native.test \
   -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache || exit 1
 mold -run cmake --build ./cmake-build.native.test --parallel 5 || exit 1
 
+# mkdir -p ./cmake-build.native.exec
+# cmake -B ./cmake-build.native.exec \
+#   -DCMAKE_BUILD_TARGET=exec \
+#   -DCMAKE_BUILD_TYPE=dev \
+#   -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache \
+#   -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache || exit 1
+# mold -run cmake --build ./cmake-build.native.exec --parallel 5 || exit 1
+
 mkdir -p ./cmake-build.native.exec
 cmake -B ./cmake-build.native.exec \
   -DCMAKE_BUILD_TARGET=exec \
-  -DCMAKE_BUILD_TYPE=dev \
+  -DCMAKE_BUILD_TYPE=release \
   -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache \
   -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache || exit 1
 mold -run cmake --build ./cmake-build.native.exec --parallel 5 || exit 1
@@ -140,5 +148,10 @@ rm -rf ./assets/samples/small-sample/output
   "--add-include-path=${PWD}/assets/samples/small-sample/src/" \
   || exit 1
 
+echo ""
+echo "*------*"
+echo "| DONE |"
+echo "*------*"
+echo ""
 
 

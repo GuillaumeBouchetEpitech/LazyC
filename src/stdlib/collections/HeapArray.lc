@@ -1,0 +1,76 @@
+
+
+#include "stdlib/strings/replaceAll2.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+export comptime void HeapArray(const char* inType) {
+  const char* k_str = ```
+
+///comptime-lazy-c: "text-replace" "HeapArray<{TYPE}>" "HeapArray__{TYPE}"
+///comptime-lazy-c: "resolve-includes" "{TYPE}"
+
+#include <stdlib.h>
+#include <stdio.h>
+
+export typedef struct HeapArray__{TYPE} {
+  {TYPE}* data;
+  unsigned int len;
+  unsigned int capacity;
+} HeapArray__{TYPE};
+
+export HeapArray__{TYPE}* HeapArray__{TYPE}__preAllocated(unsigned int capacity) {
+
+  HeapArray__{TYPE} *self = calloc(1, sizeof(HeapArray__{TYPE}));
+  if (!self)
+  {
+    return NULL;
+  }
+
+  self->len = 0;
+  self->cap = capacity < 32 ? 32 : capacity;
+  self->data = calloc(self->cap, sizeof({TYPE}));
+  if (!self->data)
+  {
+    free(self);
+    return NULL;
+  }
+
+  return self;
+}
+
+export void HeapArray__{TYPE}__free(HeapArray__{TYPE}** self) {
+  if (!self || !*self)
+  {
+    return;
+  }
+  free((*self)->data);
+  free(*self);
+  *self = NULL;
+}
+
+export void HeapArray__{TYPE}__clear(HeapArray__{TYPE}* self) {
+  self->len = 0;
+}
+
+export {TYPE}* HeapArray__{TYPE}__acquire(HeapArray__{TYPE}* self) {
+  if (self->len == self->cap) {
+    return NULL;
+  }
+  {TYPE}* retVal = &self->data[self->len];
+  self->len += 1;
+  return retVal;
+}
+
+```;
+
+  // unsigned int cleanLineLen = strlen(k_str) * 2;
+  // char* cleanLineStr = calloc(cleanLineLen, sizeof(char));
+
+  StringData newData = String__replaceAll2(k_str, "{TYPE}", inType);
+
+  printf("%s\n", newData.data);
+  free(newData.data);
+}

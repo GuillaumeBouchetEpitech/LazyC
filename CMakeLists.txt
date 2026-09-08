@@ -33,7 +33,6 @@ if (build_target STREQUAL test)
     ./src/stdlib/collections/tests/PointerHeapArray.tests.c
     ./src/stdlib/collections/tests/HashSet.tests.c
     ./src/stdlib/collections/tests/HashMap.tests.c
-    ./src/stdlib/collections/HeapArena.c
     ./src/stdlib/strings/StringBuffer.c
     ./src/stdlib/strings/replaceAll.c
     ./src/stdlib/strings/replaceAll2.c
@@ -99,7 +98,6 @@ else()
     ./src/stdlib/collections/HashMap.c
     ./src/stdlib/collections/HashSet.c
     ./src/stdlib/collections/PointerHeapArray.c
-    ./src/stdlib/collections/HeapArena.c
     ./src/stdlib/strings/StringBuffer.c
     ./src/stdlib/strings/replaceAll.c
     ./src/stdlib/strings/replaceAll2.c
