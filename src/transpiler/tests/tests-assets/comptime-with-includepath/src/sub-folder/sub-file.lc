@@ -1,0 +1,98 @@
+
+#include "./with-generics/HeapArena.lc"
+
+#include "../test-about-vec3/math/Vec3.lc"
+
+#include <stdio.h>
+
+struct localStructData {
+  float localStuff_float;
+  int localStuff_int;
+};
+
+export struct exportedStructData {
+  float exportedStuff_float;
+  int exportedStuff_int;
+};
+
+enum localEnumData {
+  localStuff_a,
+  localStuff_b,
+};
+
+export enum exportedEnumData {
+  exportedStuff_a,
+  exportedStuff_b,
+};
+
+union localUnionData {
+  struct localStructData data;
+};
+
+export union exportedUnionData {
+  struct exportedStructData data;
+};
+
+export void my_func()
+{
+  {
+    int integerVal = 666;
+  }
+
+  const char* msg = "World";
+  printf("Hello %s!\n", msg);
+
+  {
+    float floatVal = 777.777f;
+  }
+
+  {
+    const char* superMsg1 = ```
+Line1
+Line2
+Line3
+```;
+    printf("superMsg1 \"%s\"\n", superMsg1);
+  }
+
+  {
+    const char* superMsg2 = ```
+Line1 "LOL\nMDR" LOL
+Line2 "" LOL
+Line3 "--\n--" LOL
+```;
+    printf("superMsg2 \"%s\"\n", superMsg2);
+  }
+
+  {
+    // create generic HeapArena
+    HeapArena<int>* myHeapArena = HeapArena<int>::preAllocated(16);
+
+    // acquire data from the allocated HeapArena
+    int* myValueA = HeapArena<int>::acquire(myHeapArena);
+
+    // acquire another data
+    int* myValueB = myHeapArena->acquire();
+
+    // deallocate the instance
+    HeapArena<int>::free(&myHeapArena);
+  }
+
+  // {
+  //   // HeapArena<HeapArena<int>>* mySuperHeapArena = HeapArena<HeapArena<int>>::preAllocated(16);
+  //   HeapArena<Vec3>* mySuperHeapArena = HeapArena<Vec3>::preAllocated(16);
+
+  //   HeapArena<Vec3>::free(&mySuperHeapArena);
+  //   // mySuperHeapArena->free();
+  // }
+
+  {
+    HeapArena<HeapArena<int>>* mySuperHeapArena = HeapArena<HeapArena<int>>::preAllocated(16);
+    // HeapArena<HeapArena__int>* mySuperHeapArena = HeapArena<HeapArena__int>::preAllocated(16);
+
+    HeapArena<HeapArena<int>>::free(&mySuperHeapArena);
+    // HeapArena<HeapArena__int>::free(&mySuperHeapArena);
+    // mySuperHeapArena->free();
+  }
+
+}

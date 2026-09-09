@@ -40,7 +40,7 @@ typedef struct Transpiler {
 
 } Transpiler;
 
-static int _Transpiler__processComptime(Transpiler* self);
+static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIncludePath);
 static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnalyzedFile);
 
 //MARK: create
@@ -75,8 +75,6 @@ Transpiler* Transpiler__create(
   newTranspiler->analyzer = SourceAnalyzer__create();
   SourceAnalyzer__scanFromMainFile(newTranspiler->analyzer, newTranspiler->entryFilepath, newIncludePath);
 
-  PointerHeapArray__free(&newIncludePath);
-
   // // debug
   // {
   //   const PointerHeapArray * sortedAnalyzedFiles = SourceAnalyzer__getSortedAnalyzedFiles(newTranspiler->analyzer);
@@ -96,11 +94,13 @@ Transpiler* Transpiler__create(
   newTranspiler->allExtraIncludesPerFiles = HashMap__preAllocate(32);
 
   {
-    if (_Transpiler__processComptime(newTranspiler) < 0) {
+    if (_Transpiler__processComptime(newTranspiler, newIncludePath) < 0) {
       Transpiler__free(&newTranspiler);
       return NULL;
     }
   }
+
+  PointerHeapArray__free(&newIncludePath);
 
   {
     const PointerHeapArray * sortedAnalyzedFiles = SourceAnalyzer__getSortedAnalyzedFiles(newTranspiler->analyzer);
@@ -199,7 +199,7 @@ int Transpiler__applyDebug(Transpiler* self)
 
 
 //MARK: _processComptime
-static int _Transpiler__processComptime(Transpiler* self)
+static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIncludePath)
 {
   // unsigned int totalAnalyzed;
   // char** allAnalyzed = SourceAnalyzer__getAllAnalyzed(self->analyzer, &totalAnalyzed);
@@ -544,7 +544,7 @@ static int _Transpiler__processComptime(Transpiler* self)
 
   {
     SourceAnalyzer* tmpAnalyzer = SourceAnalyzer__create();
-    SourceAnalyzer__scanFromMainFile(tmpAnalyzer, comptimeMainFilepath, NULL);
+    SourceAnalyzer__scanFromMainFile(tmpAnalyzer, comptimeMainFilepath, inIncludePath);
 
     // debug
     {
@@ -765,7 +765,8 @@ const char* k_queryExportedFuncDefStr = "\n"
 static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnalyzedFile)
 {
   const char* filepath = AnalyzedFile__getFilepath(inAnalyzedFile);
-  printf(" -> processing file:\n   -> \"%s\"\n", filepath);
+  // printf(" -> processing file:\n   -> \"%s\"\n", filepath);
+  printf(" -> processing file: \"%s\"\n", filepath);
 
   // self->baseDir
   // self->entryFilepath

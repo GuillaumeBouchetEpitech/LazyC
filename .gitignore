@@ -13,6 +13,7 @@ output
 *.tree
 *.actual-sorted-dep
 
+last-known-good
 
 TODO.md
 

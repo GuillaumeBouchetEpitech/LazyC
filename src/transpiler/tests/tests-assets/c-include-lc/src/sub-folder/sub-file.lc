@@ -1,0 +1,63 @@
+
+#include <stdio.h>
+
+struct localStructData {
+  float localStuff_float;
+  int localStuff_int;
+};
+
+export struct exportedStructData {
+  float exportedStuff_float;
+  int exportedStuff_int;
+};
+
+enum localEnumData {
+  localStuff_a,
+  localStuff_b,
+};
+
+export enum exportedEnumData {
+  exportedStuff_a,
+  exportedStuff_b,
+};
+
+union localUnionData {
+  struct localStructData data;
+};
+
+export union exportedUnionData {
+  struct exportedStructData data;
+};
+
+export void my_func()
+{
+  {
+    int integerVal = 666;
+  }
+
+  const char* msg = "World";
+  printf("Hello %s!\n", msg);
+
+  {
+    float floatVal = 777.777f;
+  }
+
+  {
+    const char* superMsg1 = ```
+Line1
+Line2
+Line3
+```;
+    printf("superMsg1 \"%s\"\n", superMsg1);
+  }
+
+  {
+    const char* superMsg2 = ```
+Line1 "LOL\nMDR" LOL
+Line2 "" LOL
+Line3 "--\n--" LOL
+```;
+    printf("superMsg2 \"%s\"\n", superMsg2);
+  }
+
+}

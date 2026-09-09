@@ -3,6 +3,8 @@
 
 #include "../../parser/SourceParser.h"
 
+// #include "stdlib/collections/HeapArray.lc"
+
 // forward declaration
 typedef struct PointerHeapArray PointerHeapArray;
 
@@ -19,6 +21,8 @@ typedef struct SourceScope
   ScopeType scopeType;
   NodePos startPos;
   NodePos endPos;
+
+  // HeapArray<int> test;
 
   PointerHeapArray *allVarDef;    // <- TODO: must be sorted by startPos.index
   PointerHeapArray *allFuncCalls; // <- TODO: must be sorted by startPos.index

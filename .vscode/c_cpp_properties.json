@@ -5,7 +5,7 @@
       "includePath": [
         "./src/",
         "./third_parties/tree-sitter/lib/include/",
-        "./custom-c-parser/tree-sitter-lazy-c/bindings/c"
+        "./third_parties/tree-sitter-lazy-c/bindings/c"
       ],
       "defines": [
         "__GNUC__=3",

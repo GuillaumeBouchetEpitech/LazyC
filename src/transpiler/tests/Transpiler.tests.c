@@ -62,6 +62,67 @@ static void Transpiler_can_transpile_a_project()
   free(currentFolder);
 }
 
+static void Transpiler_can_transpile_a_C_file_that_include_a_LC_file()
+{
+  char *currentFolder = Path__dirname(__FILE__);
+  char *tmpBaseDir = Path__join(2, currentFolder, "tests-assets/c-include-lc/src");
+  char *tmpEntryFilepath = Path__join(2, tmpBaseDir, "main.c");
+  char *tmpOutputDir = Path__join(2, currentFolder, "tests-assets/c-include-lc/output");
+
+  PointerHeapArray* includePaths = PointerHeapArray__preAllocate(32);
+
+  // PointerHeapArray* sourcesFilepaths = PointerHeapArray__preAllocate(32);
+  // PointerHeapArray__pushBack(sourcesFilepaths, strdup("main.c"));
+  // PointerHeapArray__pushBack(sourcesFilepaths, strdup("sub-folder/sub-file.c"));
+  // PointerHeapArray__pushBack(sourcesFilepaths, strdup("sub-folder/sub-file.h"));
+
+  Transpiler* transpiler = Transpiler__create(tmpBaseDir, tmpEntryFilepath, tmpOutputDir, includePaths);
+  assert(transpiler != NULL);
+
+  PointerHeapArray__free(&includePaths);
+
+  // const int result = Transpiler__applyDebug(transpiler);
+  // assert(result == 0);
+
+  Transpiler__free(&transpiler);
+  assert(transpiler == NULL);
+
+  // for (int ii = 0; ii < sourcesFilepaths->len; ++ii) {
+  //   char* tmpStr = sourcesFilepaths->data[ii];
+  //   free(tmpStr);
+  // }
+  // PointerHeapArray__free(&sourcesFilepaths);
+  free(tmpOutputDir);
+  free(tmpEntryFilepath);
+  free(tmpBaseDir);
+  free(currentFolder);
+}
+
+static void Transpiler_can_transpile_a_comptime_file_that_use_an_includepath_include()
+{
+  char *currentFolder = Path__dirname(__FILE__);
+  char *tmpBaseDir = Path__join(2, currentFolder, "tests-assets/comptime-with-includepath/src");
+  char *tmpEntryFilepath = Path__join(2, tmpBaseDir, "main.c");
+  char *tmpOutputDir = Path__join(2, currentFolder, "tests-assets/comptime-with-includepath/output");
+
+  PointerHeapArray* includePaths = PointerHeapArray__preAllocate(32);
+
+  Transpiler* transpiler = Transpiler__create(tmpBaseDir, tmpEntryFilepath, tmpOutputDir, includePaths);
+  assert(transpiler != NULL);
+
+  PointerHeapArray__free(&includePaths);
+
+  Transpiler__free(&transpiler);
+  assert(transpiler == NULL);
+
+  free(tmpOutputDir);
+  free(tmpEntryFilepath);
+  free(tmpBaseDir);
+  free(currentFolder);
+}
+
+
+
 //
 //
 //
@@ -104,6 +165,8 @@ void Transpiler_tests()
   printf("=== Transpiler_tests ===\n\n");
 
   RUN_TEST(Transpiler_can_transpile_a_project);
+  RUN_TEST(Transpiler_can_transpile_a_C_file_that_include_a_LC_file);
+  RUN_TEST(Transpiler_can_transpile_a_comptime_file_that_use_an_includepath_include);
 
   printf("\n--- %d/%d tests passed ---\n\n", tests_passed, tests_run);
 }

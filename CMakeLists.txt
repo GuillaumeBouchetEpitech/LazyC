@@ -143,11 +143,13 @@ else()
       set_target_properties(exec PROPERTIES COMPILE_FLAGS "-O3 -Wall -Wextra -Werror") # release
       set_target_properties(exec PROPERTIES LINK_FLAGS "-O3") # release
       # set_target_properties(exec PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
-  else () # if (build_type STREQUAL dev)
+  elseif (build_type STREQUAL dev)
       # message(STATUS " -> DEV")
       set_target_properties(exec PROPERTIES COMPILE_FLAGS "-O0 -Wall -Wextra -Werror") # fast-release
       set_target_properties(exec PROPERTIES LINK_FLAGS "-O0") # fast-release
       # set_target_properties(exec PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin.dev")
+  else ()
+    message(FATAL_ERROR "build_type is not debug, debug_asan, release or dev")
   endif()
 
   # set_target_properties(exec PROPERTIES COMPILE_FLAGS "-O0") # fast-release

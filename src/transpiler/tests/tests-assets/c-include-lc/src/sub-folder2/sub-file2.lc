@@ -1,0 +1,8 @@
+
+#include <stdio.h>
+
+export void my_func2()
+{
+  const char* msg = "World";
+  printf("Hello %s!\n", msg);
+}

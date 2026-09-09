@@ -1,0 +1,73 @@
+
+
+// #include "stdlib/strings/replaceAll.h"
+#include "utils/replaceAll.lc"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+export comptime void HeapArena(const char* inType) {
+  const char* k_str = ```
+
+///comptime-lazy-c: "text-replace" "HeapArena<{TYPE}>" "HeapArena__{TYPE}"
+///comptime-lazy-c: "resolve-includes" "{TYPE}"
+
+#include <stdlib.h>
+#include <stdio.h>
+
+export typedef struct HeapArena__{TYPE} {
+  {TYPE}* buffer;
+  unsigned int length;
+  unsigned int capacity;
+} HeapArena__{TYPE};
+
+export HeapArena__{TYPE}* HeapArena__{TYPE}__preAllocated(unsigned int capacity) {
+
+  HeapArena__{TYPE} *newInstance = calloc(1, sizeof(HeapArena__{TYPE}));
+  if (!newInstance)
+  {
+    return NULL;
+  }
+
+  newInstance->buffer = calloc(capacity + 1, sizeof({TYPE}));
+  newInstance->length = 0;
+  newInstance->capacity = capacity;
+
+  return newInstance;
+  // return HeapArena__{TYPE}{
+  //   buffer: malloc(capacity * sizeof({TYPE})),
+  //   length: 0,
+  //   capacity: capacity,
+  // };
+}
+
+export void HeapArena__{TYPE}__free(HeapArena__{TYPE}** self) {
+  free((*self)->buffer);
+  free(*self);
+  *self = NULL;
+}
+
+export void HeapArena__{TYPE}__clear(HeapArena__{TYPE}* self) {
+  self->length = 0;
+}
+
+export {TYPE}* HeapArena__{TYPE}__acquire(HeapArena__{TYPE}* self) {
+  if (self->length == self->capacity) {
+    return NULL;
+  }
+  {TYPE}* retVal = &self->buffer[self->length];
+  self->length += 1;
+  return retVal;
+}
+
+```;
+
+  unsigned int cleanLineLen = strlen(k_str) * 2;
+  char* cleanLineStr = calloc(cleanLineLen, sizeof(char));
+
+  String__replaceAll(k_str, "{TYPE}", inType, cleanLineStr, cleanLineLen);
+
+  printf("%s\n", cleanLineStr);
+  free(cleanLineStr);
+}
