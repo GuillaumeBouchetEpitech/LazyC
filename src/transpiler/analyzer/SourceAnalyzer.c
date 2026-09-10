@@ -467,6 +467,7 @@ int SourceAnalyzer__scanFile(SourceAnalyzer *self, const char *inFilepath, Point
 
         for (unsigned int ii = 0; ii < totalKeys; ++ii)
         {
+          // printf("set definitionToFileMap: [%s] -> %s\n", allKeys[ii], analyzedFile->filepath);
           HashMap__set(self->definitionToFileMap, allKeys[ii], analyzedFile);
         }
 

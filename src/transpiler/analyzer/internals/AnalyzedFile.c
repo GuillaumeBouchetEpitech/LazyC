@@ -304,8 +304,13 @@ int AnalyzedFile__queryStructDef(AnalyzedFile *self)
 
         // printf(" -----> { %s }\n", tmpName);
 
-        const NodeData* exportedNode = HashMap__get(cursor->captureMap, "exported");
-        if (exportedNode) {
+        if (self->fileType == SOURCE_LC) {
+          const NodeData* exportedNode = HashMap__get(cursor->captureMap, "exported");
+          if (exportedNode) {
+            SourceIndexer__addExportedDef(self->indexer, tmpName);
+          }
+        }
+        else if (self->fileType == SOURCE_H) {
           SourceIndexer__addExportedDef(self->indexer, tmpName);
         }
 

@@ -55,12 +55,12 @@ ComptimeCallRef *ComptimeCallRef__create(
       {
         // new arg
         char* newArgStr = strndup(tmpArgsValue + savedIndex, ii - savedIndex);
-        printf("   -> newArgStr %s\n", newArgStr);
+        // printf("   -> newArgStr %s\n", newArgStr);
 
         char* trimmedStrPtr = String__trim(newArgStr);
         char* trimmedStr = strdup(trimmedStrPtr);
 
-        printf("     -> trimmedStr %s\n", trimmedStr);
+        // printf("     -> trimmedStr %s\n", trimmedStr);
 
         free(newArgStr);
 
@@ -73,12 +73,12 @@ ComptimeCallRef *ComptimeCallRef__create(
           unsigned int nameLen = (int)(delim - trimmedStr);
           char* nameStr = strndup(trimmedStr, nameLen);
 
-          printf(" -===-> nameStr: %s\n", nameStr);
+          // printf(" -===-> nameStr: %s\n", nameStr);
 
           unsigned int argLen = (int)(strlen(trimmedStr) - nameLen);
           char* argStr = strndup(delim, argLen);
 
-          printf(" -===-> argStr: %s\n", argStr);
+          // printf(" -===-> argStr: %s\n", argStr);
 
           NodePos fakeNodePos;
           ComptimeCallRef* tmpComptimeCall = ComptimeCallRef__create(fakeNodePos, fakeNodePos, nameStr, argStr);
@@ -86,7 +86,7 @@ ComptimeCallRef *ComptimeCallRef__create(
           free(trimmedStr);
           trimmedStr = strdup(tmpComptimeCall->signature);
 
-          printf(" -===-> trimmedStr: %s\n", trimmedStr);
+          // printf(" -===-> trimmedStr: %s\n", trimmedStr);
 
           ComptimeCallRef__free(&tmpComptimeCall);
 
@@ -111,12 +111,12 @@ ComptimeCallRef *ComptimeCallRef__create(
     {
       // new arg
       char* newArgStr = strndup(tmpArgsValue + savedIndex, newLength - savedIndex);
-      printf("   -> newArgStr %s\n", newArgStr);
+      // printf("   -> newArgStr %s\n", newArgStr);
 
       char* trimmedStrPtr = String__trim(newArgStr);
       char* trimmedStr = strdup(trimmedStrPtr);
 
-      printf("     -> trimmedStr %s\n", trimmedStr);
+      // printf("     -> trimmedStr %s\n", trimmedStr);
 
       free(newArgStr);
 
@@ -129,12 +129,12 @@ ComptimeCallRef *ComptimeCallRef__create(
         unsigned int nameLen = (int)(delim - trimmedStr);
         char* nameStr = strndup(trimmedStr, nameLen);
 
-        printf(" -===-> nameStr: %s\n", nameStr);
+        // printf(" -===-> nameStr: %s\n", nameStr);
 
         unsigned int argLen = (int)(strlen(trimmedStr) - nameLen);
         char* argStr = strndup(delim, argLen);
 
-        printf(" -===-> argStr: %s\n", argStr);
+        // printf(" -===-> argStr: %s\n", argStr);
 
         NodePos fakeNodePos;
         ComptimeCallRef* tmpComptimeCall = ComptimeCallRef__create(fakeNodePos, fakeNodePos, nameStr, argStr);
@@ -142,7 +142,7 @@ ComptimeCallRef *ComptimeCallRef__create(
         free(trimmedStr);
         trimmedStr = strdup(tmpComptimeCall->signature);
 
-        printf(" -===-> trimmedStr: %s\n", trimmedStr);
+        // printf(" -===-> trimmedStr: %s\n", trimmedStr);
 
         ComptimeCallRef__free(&tmpComptimeCall);
 

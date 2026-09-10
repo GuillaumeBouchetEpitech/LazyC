@@ -14,6 +14,7 @@ export comptime void HeapArray(const char* inType) {
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <memory.h>
 
 export struct HeapArray__{TYPE} {
   {TYPE}* data;
@@ -81,7 +82,7 @@ int HeapArray__{TYPE}__popBack(HeapArray__{TYPE} *self)
   if (self->len > 0)
   {
     --self->len;
-    memset(self->datap[self->len], 0, sizeof({TYPE}));
+    memset(&self->data[self->len], 0, sizeof({TYPE}));
     // self->data[--self->len] = NULL;
     return 0;
   }

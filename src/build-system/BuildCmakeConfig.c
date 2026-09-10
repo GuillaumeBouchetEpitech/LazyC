@@ -48,22 +48,24 @@ int BuildCmakeConfig__generateCmakeFile(const BuildCmakeConfigOpts *inOpts)
 
     // printf(" ---tmpFilepath-> %s\n", tmpFilepath);
 
-    char* inputFilepath = NULL;
-    char* outFilepath = NULL;
-    if (tmpFilepath[0] == '/') {
-      // path is absolute
-      inputFilepath = strdup(tmpFilepath);
+    // // char* inputFilepath = NULL;
+    // char* outFilepath = NULL;
+    // if (tmpFilepath[0] == '/') {
+    //   // path is absolute
+    //   // inputFilepath = strdup(tmpFilepath);
 
-      const int baseDirLen = strlen(inOpts->inBaseDir);
-      const char* relInputFilepath = tmpFilepath + baseDirLen;
+    //   const int baseDirLen = strlen(inOpts->inBaseDir);
+    //   const char* relInputFilepath = tmpFilepath + baseDirLen;
 
-      outFilepath = Path__join(2, outSrcFolder, relInputFilepath);
-    }
-    else {
-      // path is relative
-      inputFilepath = Path__join(2, inOpts->inBaseDir, tmpFilepath);
-      outFilepath = Path__join(2, outSrcFolder, tmpFilepath);
-    }
+    //   outFilepath = Path__join(2, outSrcFolder, relInputFilepath);
+    // }
+    // else {
+    //   // path is relative
+    //   // inputFilepath = Path__join(2, inOpts->inBaseDir, tmpFilepath);
+    //   outFilepath = Path__join(2, outSrcFolder, tmpFilepath);
+    // }
+
+    char* outFilepath = strdup(tmpFilepath);
 
     // printf("   -outFilepath-> %s\n", outFilepath);
 
@@ -80,18 +82,18 @@ int BuildCmakeConfig__generateCmakeFile(const BuildCmakeConfigOpts *inOpts)
 
     free(outFolderPath);
 
-    int copyResult = 0;
+    // int copyResult = 0;
 
-    if (strcmp(inputFilepath, outFilepath) != 0) {
-      // input and output folder are different -> must copy the files
-      copyResult = StreamCopyFile__copyFile(inputFilepath, outFilepath);
-    }
+    // if (strcmp(inputFilepath, outFilepath) != 0) {
+    //   // input and output folder are different -> must copy the files
+    //   copyResult = StreamCopyFile__copyFile(inputFilepath, outFilepath);
+    // }
 
-    free(inputFilepath);
+    // free(inputFilepath);
 
-    if (copyResult < 0) {
-      // TODO: goto error_cleanup
-    }
+    // if (copyResult < 0) {
+    //   // TODO: goto error_cleanup
+    // }
   }
 
 
@@ -132,8 +134,9 @@ int BuildCmakeConfig__generateCmakeFile(const BuildCmakeConfigOpts *inOpts)
 
   for (unsigned int ii = 0; ii < outputSourcesFilepaths->len; ++ii) {
     const char* tmpFilepath = outputSourcesFilepaths->data[ii];
+    const char* relFilepath = tmpFilepath + outputDirLen + 1;
 
-    snprintf(buffer, 1024, "  ${PROJECT_SOURCE_DIR}/%s\n", tmpFilepath + outputDirLen + 1); // <- ${PROJECT_SOURCE_DIR}
+    snprintf(buffer, 1024, "  ${PROJECT_SOURCE_DIR}/%s\n", relFilepath);
     StreamWriter__write(streamWriter, buffer, strlen(buffer));
   }
 

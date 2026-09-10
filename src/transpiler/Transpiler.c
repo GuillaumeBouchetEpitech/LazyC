@@ -266,9 +266,7 @@ static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIn
     // const AnalyzedFile* analyzedFile = SourceAnalyzer__getAnalyzed(self->analyzer, allAnalyzed[ii]);
     const AnalyzedFile* analyzedFile = sortedAnalyzedFiles->data[ii];
 
-    const SourceIndexer* currIndexer = AnalyzedFile__getIndexer(analyzedFile);
-
-    const PointerHeapArray* comptimeCallsList = SourceIndexer__getComptimeCallsList(currIndexer);
+    const PointerHeapArray* comptimeCallsList = SourceIndexer__getComptimeCallsList(analyzedFile->indexer);
 
     for (unsigned int callIdx = 0; callIdx < comptimeCallsList->len; ++callIdx)
     {
@@ -811,6 +809,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
   // get the exported function definitions
   QueryMatchData* newMatchData = SourceParsedFile__query(parsedFile, k_queryExportedFuncDefStr, strlen(k_queryExportedFuncDefStr));
 
+  ///MARK: collect edits
   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
   {
 
@@ -828,7 +827,8 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
 
         char* tmpContent = strndup(srcStr + 1, contentSize - 2);
         char* tmpExtName = Path__extname(tmpContent);
-        // printf(" ---> {%s} (%s)\n", tmpContent, tmpExtName);
+
+        printf(" IMPORT_SOURCE ---> {%s} (%s)\n", tmpContent, tmpExtName);
 
         if (
           strcmp(tmpExtName, ".c") == 0 ||
@@ -841,7 +841,8 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
 
           char buffer[1024];
           memset(buffer, 0, 1024);
-          snprintf(buffer, 1024, "\"%s\"\n", strbuffer->data);
+          // snprintf(buffer, 1024, "\"%s\"\n", strbuffer->data);
+          snprintf(buffer, 1024, "\"%s\"", strbuffer->data);
 
           {
             // add the edit
@@ -853,7 +854,13 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
             PointerHeapArray__pushBack(allEdits, newEdit);
           }
 
+          printf("  -> HAS EDIT ---> replacement=[%s]\n", buffer);
+
           StringBuffer__free(&strbuffer);
+        }
+        else
+        {
+          printf("  => NO EDIT\n");
         }
 
         // SourceIndexer__addImport(self->indexer, tmpContent);
@@ -1180,6 +1187,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
     free(outFolderPath);
   }
 
+  ///MARK: make C
   StreamWriter* streamWriter = StreamWriter__create(outFilepath);
   if (!streamWriter) {
     fprintf(stderr, " -> streamWriter failure, PATH=%s\n", outFilepath);
@@ -1188,55 +1196,59 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
 
   if (needHeaderFile != 0)
   {
-    // prepend the include of the header to its C file
-    // -> done since any exported struct/union/enum will be moved to the header
-
-    char* baseHeaderFile = Path__basename(outHeaderFilepath);
-
-    const int bufSize = strlen(outHeaderFilepath) + 32;
-    char* tmpBuf = calloc(bufSize, sizeof(char));
-
-    snprintf(tmpBuf, bufSize, "\n#include \"./%s\"\n\n", baseHeaderFile);
-    StreamWriter__write(streamWriter, tmpBuf, strlen(tmpBuf));
-
-    free(tmpBuf);
-    free(baseHeaderFile);
-  }
-
-  {
-    HashSet* tmpSet = HashMap__get(self->allExtraIncludesPerFiles, filepath);
-    if (tmpSet && HashSet__get_totalItems(tmpSet) > 0)
     {
-      char* outFolderPath = Path__dirname(filepath);
+      // prepend the include of the header to its C file
+      // -> done since any exported struct/union/enum will be moved to the header
 
-      printf(" GOT GENERATED STUFF: %s\n", filepath);
+      char* baseHeaderFile = Path__basename(outHeaderFilepath);
 
-      unsigned int totalKeys = 0;
-      char** allkeys = HashSet__get_allKeys(tmpSet, &totalKeys);
+      const int bufSize = strlen(outHeaderFilepath) + 32;
+      char* tmpBuf = calloc(bufSize, sizeof(char));
 
-      for (unsigned int ii = 0; ii < totalKeys; ++ii)
-      {
-        const char* tmpFilepath = allkeys[ii];
-        char* relPath = Path__relative(outFolderPath, tmpFilepath);
+      snprintf(tmpBuf, bufSize, "\n#include \"./%s\"\n\n", baseHeaderFile);
+      StreamWriter__write(streamWriter, tmpBuf, strlen(tmpBuf));
 
-        printf("  -> IS GENERATED\n");
-        printf("    -> caller: %s\n", filepath);
-        printf("    -> callee: %s\n", tmpFilepath);
-        printf("    -> relative: %s\n", relPath);
-
-        const int bufSize = strlen(outHeaderFilepath) + 32;
-        char* tmpBuf = calloc(bufSize, sizeof(char));
-        snprintf(tmpBuf, bufSize, "\n#include \"%s\"\n\n", relPath);
-        StreamWriter__write(streamWriter, tmpBuf, strlen(tmpBuf));
-        free(tmpBuf);
-
-        free(relPath);
-      }
-
-      free(allkeys);
-      free(outFolderPath);
+      free(tmpBuf);
+      free(baseHeaderFile);
     }
   }
+
+    {
+      HashSet* tmpSet = HashMap__get(self->allExtraIncludesPerFiles, filepath);
+      if (tmpSet && HashSet__get_totalItems(tmpSet) > 0)
+      {
+        char* outFolderPath = Path__dirname(filepath);
+
+        printf(" GOT GENERATED STUFF: %s\n", filepath);
+
+        unsigned int totalKeys = 0;
+        char** allkeys = HashSet__get_allKeys(tmpSet, &totalKeys);
+
+        for (unsigned int ii = 0; ii < totalKeys; ++ii)
+        {
+          const char* tmpFilepath = allkeys[ii];
+          char* relPath = Path__relative(outFolderPath, tmpFilepath);
+
+          printf("  -> IS GENERATED\n");
+          printf("    -> caller: %s\n", filepath);
+          printf("    -> callee: %s\n", tmpFilepath);
+          printf("    -> relative: %s\n", relPath);
+
+          const int bufSize = strlen(relPath) + 32;
+          char* tmpBuf = calloc(bufSize, sizeof(char));
+
+          snprintf(tmpBuf, bufSize, "\n#include \"%s\"\n\n", relPath);
+          StreamWriter__write(streamWriter, tmpBuf, strlen(tmpBuf));
+
+          free(tmpBuf);
+          free(relPath);
+        }
+
+        free(allkeys);
+        free(outFolderPath);
+      }
+    }
+  // }
 
   const int fileLength = strlen(fileContent);
 
@@ -1251,6 +1263,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
       case ET_COMMENT_RANGE:
       {
         CommentRangeEdit* commentRange = &currEdit->editValue.commentRange;
+        // printf("  -> ET_COMMENT_RANGE\n");
 
         {
           // advance to the start of the next edit
@@ -1291,6 +1304,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
       case ET_CONVERT_RANGE:
       {
         ConvertRangeEdit* convertRange = &currEdit->editValue.convertRange;
+        // printf("  -> ET_CONVERT_RANGE (%s)\n", convertRange->replacement);
 
         {
           // advance to the start of the next edit
@@ -1304,8 +1318,8 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
 
         {
           // advance to the end of the current edit but write the replacement string instead
-          const int length = convertRange->endIndex - convertRange->startIndex;
           StreamWriter__write(streamWriter, convertRange->replacement, strlen(convertRange->replacement));
+          const int length = convertRange->endIndex - convertRange->startIndex;
           currReadIndex += length;
         }
 
@@ -1314,6 +1328,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
       case ET_CONVERT_SUPER_STRING_LITERAL:
       {
         SuperStringLiteralEdit* superStringLiteral = &currEdit->editValue.superStringLiteral;
+        // printf("  -> ET_CONVERT_SUPER_STRING_LITERAL\n");
 
         // remove the prefixed and suffixed ```
         // handle each lines
@@ -1428,6 +1443,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
   //
   //
 
+  ///MARK: make H
   if (needHeaderFile != 0) {
     // generate header file
 
@@ -1532,6 +1548,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
   //
 
 
+  ///MARK: apply extra includes
   {
 
 
@@ -1544,14 +1561,6 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
 
       unsigned int totalImports = 0;
       char** allImports = HashSet__get_allKeys(tmpSet, &totalImports);
-
-      // for (unsigned int ii = 0; ii < totalKeys; ++ii)
-      // {
-      //   const char* tmpFilepath = allkeys[ii];
-
-
-      // unsigned int totalImports;
-      // char** allImports = SourceIndexer__getAllImports(inAnalyzedFile->indexer, &totalImports);
 
       for (unsigned int importIndex = 0; importIndex < totalImports; ++importIndex)
       {
@@ -1703,12 +1712,15 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
 
     }
 
+
   }
 
 
   //
   //
   //
+
+  ///MARK: cleanup
 
   for (unsigned int ii = 0; ii < allEdits->len; ++ii) {
     AnyEdit* currEdit = allEdits->data[ii];
@@ -1749,7 +1761,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
 PointerHeapArray* Transpiler__getOutputSource(const Transpiler* self)
 {
   unsigned int totalAnalyzed;
-  char** allAnalyzed = SourceAnalyzer__getAllAnalyzed(self->analyzer, &totalAnalyzed);
+  char** allAnalyzed = HashSet__get_allKeys(self->allGeneratedFiles, &totalAnalyzed);
 
   printf(" -> totalAnalyzed:%d\n", totalAnalyzed);
 
@@ -1760,11 +1772,36 @@ PointerHeapArray* Transpiler__getOutputSource(const Transpiler* self)
   }
 
   for (unsigned int ii = 0; ii < totalAnalyzed; ++ii) {
-    if (PointerHeapArray__pushBack(sourcesFilepaths, allAnalyzed[ii]) != 0)
+
+    char* currFilepath = allAnalyzed[ii];
+
+    // must exclude the comptime main file
+    if (strstr(currFilepath, "/.generated/comptime.main.c") != NULL)
+    {
+      continue;
+    }
+
+    // {
+    //   char* currExt = Path__extname(currFilepath);
+    //   int isLazyC = (strcmp(currExt, ".lc") == 0) ? 1 : 0;
+    //   free(currExt);
+
+    //   // must skip the lazy-c files
+    //   if (isLazyC == 1)
+    //   {
+    //     printf(" -> SKIPPED: %s\n", currFilepath);
+    //     continue;
+    //   }
+    // }
+
+    printf(" ---> to compile: %s\n", currFilepath);
+
+    if (PointerHeapArray__pushBack(sourcesFilepaths, currFilepath) != 0)
     {
       panic("OOM?");
     }
   }
+
 
   return sourcesFilepaths;
 }

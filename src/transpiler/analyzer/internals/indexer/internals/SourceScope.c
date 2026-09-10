@@ -16,33 +16,36 @@
 
 SourceScope *SourceScope__create(NodePos inStartPos, NodePos inEndPos)
 {
-  SourceScope *newScope = calloc(1, sizeof(SourceScope));
-  if (!newScope)
+  SourceScope *self = calloc(1, sizeof(SourceScope));
+  if (!self)
   {
     return NULL;
   }
 
-  newScope->allChildrenScopes = PointerHeapArray__preAllocate(32);
-  newScope->allVarDef = PointerHeapArray__preAllocate(32);
-  newScope->allFuncCalls = PointerHeapArray__preAllocate(32);
-  newScope->allComptimeCalls = PointerHeapArray__preAllocate(32);
-  newScope->allVarRefs = PointerHeapArray__preAllocate(32);
-  newScope->allStructDef = PointerHeapArray__preAllocate(32);
-  if (!newScope->allChildrenScopes ||
-      !newScope->allVarDef ||
-      !newScope->allFuncCalls ||
-      !newScope->allComptimeCalls ||
-      !newScope->allVarRefs ||
-      !newScope->allStructDef)
+  self->allChildrenScopes = PointerHeapArray__preAllocate(32);
+
+  // self->allVarDef2 = HeapArray<VarDef>::preAllocated(32);
+
+  self->allVarDef = PointerHeapArray__preAllocate(32);
+  self->allFuncCalls = PointerHeapArray__preAllocate(32);
+  self->allComptimeCalls = PointerHeapArray__preAllocate(32);
+  self->allVarRefs = PointerHeapArray__preAllocate(32);
+  self->allStructDef = PointerHeapArray__preAllocate(32);
+  if (!self->allChildrenScopes ||
+      !self->allVarDef ||
+      !self->allFuncCalls ||
+      !self->allComptimeCalls ||
+      !self->allVarRefs ||
+      !self->allStructDef)
   {
-    SourceScope__free(&newScope);
+    SourceScope__free(&self);
     return NULL;
   }
 
-  newScope->startPos = inStartPos;
-  newScope->endPos = inEndPos;
+  self->startPos = inStartPos;
+  self->endPos = inEndPos;
 
-  return newScope;
+  return self;
 }
 
 void SourceScope__free(SourceScope **self)
@@ -56,6 +59,9 @@ void SourceScope__free(SourceScope **self)
   free((*self)->funcName);
   // }
   PointerHeapArray__free(&(*self)->allStructDef);
+
+  // HeapArray<VarDef>::free(&(*self)->allVarDef2);
+
   PointerHeapArray__free(&(*self)->allVarDef);
   PointerHeapArray__free(&(*self)->allFuncCalls);
   PointerHeapArray__free(&(*self)->allComptimeCalls);

@@ -15,15 +15,14 @@
 
 static void BuildCmakeConfig_can_generate_a_cmake_file() {
 
-
   char* currentFolder = Path__dirname(__FILE__);
   char *tmpBaseDir = Path__join(2, currentFolder, "tests-assets/simple/src");
   char* tmpOutputDir = Path__join(2, currentFolder, "tests-assets/simple/output");
 
   PointerHeapArray* sourcesFilepaths = PointerHeapArray__preAllocate(32);
-  PointerHeapArray__pushBack(sourcesFilepaths, strdup("main.c"));
-  PointerHeapArray__pushBack(sourcesFilepaths, strdup("sub-folder/sub-file.c"));
-  PointerHeapArray__pushBack(sourcesFilepaths, strdup("sub-folder/sub-file.h"));
+  PointerHeapArray__pushBack(sourcesFilepaths, Path__join(2, tmpBaseDir, "main.c"));
+  PointerHeapArray__pushBack(sourcesFilepaths, Path__join(2, tmpBaseDir, "sub-folder/sub-file.c"));
+  PointerHeapArray__pushBack(sourcesFilepaths, Path__join(2, tmpBaseDir, "sub-folder/sub-file.h"));
 
   BuildCmakeConfigOpts opts;
   opts.inBaseDir = tmpBaseDir;
@@ -53,9 +52,9 @@ static void BuildCmakeConfig_can_generate_a_cmake_file_includepath_and_librarypa
   char* tmpOutputDir = Path__join(2, currentFolder, "tests-assets/simple2/output");
 
   PointerHeapArray* sourcesFilepaths = PointerHeapArray__preAllocate(32);
-  PointerHeapArray__pushBack(sourcesFilepaths, strdup("main.c"));
-  PointerHeapArray__pushBack(sourcesFilepaths, strdup("sub-folder/sub-file.c"));
-  PointerHeapArray__pushBack(sourcesFilepaths, strdup("sub-folder/sub-file.h"));
+  PointerHeapArray__pushBack(sourcesFilepaths, Path__join(2, tmpBaseDir, "main.c"));
+  PointerHeapArray__pushBack(sourcesFilepaths, Path__join(2, tmpBaseDir, "sub-folder/sub-file.c"));
+  PointerHeapArray__pushBack(sourcesFilepaths, Path__join(2, tmpBaseDir, "sub-folder/sub-file.h"));
 
   PointerHeapArray* includeFilepaths = PointerHeapArray__preAllocate(32);
   PointerHeapArray__pushBack(includeFilepaths, strdup("tests-assets/simple/lib"));
@@ -78,16 +77,19 @@ static void BuildCmakeConfig_can_generate_a_cmake_file_includepath_and_librarypa
     free(tmpStr);
   }
   PointerHeapArray__free(&sourcesFilepaths);
+
   for (int ii = 0; ii < includeFilepaths->len; ++ii) {
     char* tmpStr = includeFilepaths->data[ii];
     free(tmpStr);
   }
   PointerHeapArray__free(&includeFilepaths);
+
   for (int ii = 0; ii < libraryFilepaths->len; ++ii) {
     char* tmpStr = libraryFilepaths->data[ii];
     free(tmpStr);
   }
   PointerHeapArray__free(&libraryFilepaths);
+
   free(tmpOutputDir);
   free(tmpBaseDir);
   free(currentFolder);

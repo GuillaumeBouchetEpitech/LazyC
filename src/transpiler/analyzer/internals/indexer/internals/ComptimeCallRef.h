@@ -14,6 +14,7 @@ typedef struct ComptimeCallRef
 
   char *varName;
   char *argsValue;
+  // PointerHeapArray<cstring>
   PointerHeapArray *argsList;
 
   char *signature;

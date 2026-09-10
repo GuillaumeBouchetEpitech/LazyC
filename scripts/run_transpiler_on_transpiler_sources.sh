@@ -24,18 +24,19 @@ echo ""
 #   "--add-include-path=${PROJECT_FOLDER_PATH}/assets/samples/small-sample/src/" \
 #   || exit 1
 
+if [ ! -f ./bin/exec ];
+then
+  echo "no ./bin/exec binary!!!"
+  exit 1
+fi
 
-# ./bin/exec \
-#   "--base-dir=${PWD}/src/" \
-#   "--input-file=${PWD}/src/main.c" \
-#   "--output-dir=${PWD}/output" \
-#   "--add-include-path=${PWD}/third_parties/tree-sitter-lazy-c/bindings/c" \
-#   "--add-library-path=${PWD}/third_parties/tree-sitter-lazy-c/build-native/tree-sitter-lazy_c.a" \
-#   "--add-include-path=${PWD}/third_parties/tree-sitter/lib/include" \
-#   "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
-#   || exit 1
+rm -rf "${PWD}/output"
 
-./output/bin/exec \
+# cleanup ".generated" folder(s)
+find ./src/ -name .generated -type d -type d
+find ./src/ -name .generated -type d -type d -exec bash -c ' rm -rf "{}" ' \;
+
+gdb -ex run --args ./bin/exec \
   "--base-dir=${PWD}/src/" \
   "--input-file=${PWD}/src/main.c" \
   "--output-dir=${PWD}/output" \
@@ -45,7 +46,13 @@ echo ""
   "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
   || exit 1
 
-# ./last-known-good/exec \
+# if [ ! -f ./last-known-good/exec ];
+# then
+#   echo "no ./last-known-good/exec binary!!!"
+#   exit 1
+# fi
+
+# gdb -ex run --args ./last-known-good/exec \
 #   "--base-dir=${PWD}/src/" \
 #   "--input-file=${PWD}/src/main.c" \
 #   "--output-dir=${PWD}/output" \
@@ -54,3 +61,18 @@ echo ""
 #   "--add-include-path=${PWD}/third_parties/tree-sitter/lib/include" \
 #   "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
 #   || exit 1
+
+
+
+# ./output/bin/exec \
+#   "--base-dir=${PWD}/src/" \
+#   "--input-file=${PWD}/src/main.c" \
+#   "--output-dir=${PWD}/output" \
+#   "--add-include-path=${PWD}/third_parties/tree-sitter-lazy-c/bindings/c" \
+#   "--add-library-path=${PWD}/third_parties/tree-sitter-lazy-c/build-native/tree-sitter-lazy_c.a" \
+#   "--add-include-path=${PWD}/third_parties/tree-sitter/lib/include" \
+#   "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
+#   || exit 1
+
+
+
