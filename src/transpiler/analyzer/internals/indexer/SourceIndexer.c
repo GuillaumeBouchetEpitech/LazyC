@@ -26,14 +26,18 @@
 // MARK: SourceIndexer
 typedef struct ImportedFiles
 {
+  // set of path (absolute path or relative path made absolute)
   HashSet *filepathsSet;
+  // set of path (not absolute nor relative path, very likely dependant on includepath)
   HashSet *rawFilepathsSet;
 } ImportedFiles;
 
 typedef struct ComptimeFeatures
 {
-  HashSet *typesToResolve; // ex: "Vec3", etc.
-  HashMap *textsToReplace; // ex: "HeapArena<int>" -> "HeapArena__int"
+  // ex: "Vec3", etc.
+  HashSet *typesToResolve;
+  // ex: "HeapArena<int>" -> "HeapArena__int"
+  HashMap *textsToReplace;
 } ComptimeFeatures;
 
 typedef struct SourceIndexer
@@ -42,12 +46,18 @@ typedef struct SourceIndexer
 
   ComptimeFeatures comptimeFeatures;
 
+  // PointerHeapArray<SourceScope>
   PointerHeapArray *allScopes;
+
   SourceScope *rootScope;
 
+  // PointerHeapArray<VarDef>
   PointerHeapArray *allVarDef;
+  // PointerHeapArray<IdentifiedRef>
   PointerHeapArray *allFuncCalls;
+  // PointerHeapArray<ComptimeCallRef>
   PointerHeapArray *allComptimeCalls;
+  // PointerHeapArray<IdentifiedRef>
   PointerHeapArray *allVarRefs;
 
   HashSet *allRootDefs;
@@ -215,7 +225,7 @@ void SourceIndexer__free(SourceIndexer **self)
   *self = NULL;
 }
 
-// MARK: addImport
+// MARK: imports
 int SourceIndexer__addImport(SourceIndexer *self, const char *inImportStr)
 {
   return HashSet__set(self->importedFiles.filepathsSet, inImportStr);
@@ -226,7 +236,7 @@ int SourceIndexer__hasImport(const SourceIndexer *self, const char *inImportStr)
   return HashSet__contains(self->importedFiles.filepathsSet, inImportStr);
 }
 
-// MARK: getAllImports
+
 char **SourceIndexer__getAllImports(const SourceIndexer *self, unsigned int *outTotalImports)
 {
   return HashSet__get_allKeys(self->importedFiles.filepathsSet, outTotalImports);
@@ -337,7 +347,7 @@ void SourceIndexer__computeScopesHierarchy(SourceIndexer *self)
     SourceScope *currScope = self->allScopes->data[ii];
     if (currScope->parentScope)
     {
-      // printf("PUSH SCOPE TO PARENT\n");
+      // push scope to parent
       PointerHeapArray__pushBack(currScope->parentScope->allChildrenScopes, currScope);
     }
   }
@@ -429,7 +439,7 @@ int SourceIndexer__addFunCallRef(SourceIndexer *self, const char *inFuncCallName
   return 0;
 }
 
-// MARK: addComptimeCall
+// MARK: comptimeCall
 int SourceIndexer__addComptimeCall(SourceIndexer *self, const char *inComtimeCallName, const char *inComtimeArgs, NodePos inStartPos, NodePos inEndPos)
 {
   ComptimeCallRef *newComptimeCallRef = ComptimeCallRef__create(inStartPos, inEndPos, inComtimeCallName, inComtimeArgs);
@@ -450,6 +460,11 @@ int SourceIndexer__addComptimeCall(SourceIndexer *self, const char *inComtimeCal
     return -1;
   }
   return 0;
+}
+
+const PointerHeapArray* SourceIndexer__getComptimeCallsList(const SourceIndexer *self)
+{
+  return self->allComptimeCalls;
 }
 
 // MARK: addVarRef
@@ -478,7 +493,7 @@ int SourceIndexer__addVarRef(SourceIndexer *self, const char *inVarRefName, Node
   return 0;
 }
 
-//MARK: addExportedDef
+//MARK: exportedDef
 int SourceIndexer__addExportedDef(SourceIndexer *self, const char *inVarRefName)
 {
   // if (HashSet__contains(self->allExportedDefsSet, inVarRefName))
@@ -492,16 +507,9 @@ int SourceIndexer__addExportedDef(SourceIndexer *self, const char *inVarRefName)
   return 0;
 }
 
-//MARK: getExportedDef
 const HashSet* SourceIndexer__getExportedDef(const SourceIndexer *self)
 {
   return self->allExportedDefsSet;
-}
-
-// MARK: getComptimeCallsList
-const PointerHeapArray* SourceIndexer__getComptimeCallsList(const SourceIndexer *self)
-{
-  return self->allComptimeCalls;
 }
 
 //MARK: ComptimeTypeToResolve
@@ -732,14 +740,10 @@ static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, Strea
 }
 
 // MARK: debugTree
-void SourceIndexer__debugScopeTree(SourceIndexer *self, StreamWriter *inStreamWriter)
+void SourceIndexer__debugScopeTree(SourceIndexer *self, const char* inBaseDir, StreamWriter *inStreamWriter)
 {
 
   {
-    // HashSet *typesToResolve; // ex: "Vec3", etc.
-    // HashMap *textsToReplace; // ex: "HeapArena<int>" -> "HeapArena__int"
-    // self->comptimeFeatures.textsToReplace;
-    // self->comptimeFeatures.typesToResolve;
 
     char buffer[1024];
     memset(buffer, 0, 1024);
@@ -751,15 +755,21 @@ void SourceIndexer__debugScopeTree(SourceIndexer *self, StreamWriter *inStreamWr
       snprintf(buffer, 1024, "IMPORTS (total: %d)\n", totalItems);
       StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
+      const unsigned int toSkip = strlen(inBaseDir);
+
       for (unsigned int ii = 0; ii < totalItems; ++ii)
       {
-        snprintf(buffer, 1024, "-> filepath=%s\n", allKeys[ii]);
+        const char* currPath = allKeys[ii];
+        const char* relPath = currPath + toSkip + 1;
+
+        snprintf(buffer, 1024, "-> filepath=%s\n", relPath);
         StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
       }
 
       free(allKeys);
     }
 
+    // HashMap *textsToReplace; // ex: "HeapArena<int>" -> "HeapArena__int"
     {
       unsigned int totalItems = 0;
       EntryItem* items = HashMap__get_allItems(self->comptimeFeatures.textsToReplace, &totalItems);
@@ -777,6 +787,7 @@ void SourceIndexer__debugScopeTree(SourceIndexer *self, StreamWriter *inStreamWr
       free(items);
     }
 
+    // HashSet *typesToResolve; // ex: "Vec3", etc.
     {
       unsigned int totalItems = 0;
       char** allKeys = HashSet__get_allKeys(self->comptimeFeatures.typesToResolve, &totalItems);

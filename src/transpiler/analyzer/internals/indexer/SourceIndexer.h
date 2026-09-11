@@ -55,5 +55,5 @@ const HashMap* SourceIndexer__getComptimeTextsToReplace(const SourceIndexer *sel
 const VarDef* SourceIndexer__findTypename(const SourceIndexer *self, const char *inVarRefName, NodePos inStartPos);
 
 
-void SourceIndexer__debugScopeTree(SourceIndexer *self, StreamWriter *streamWriter);
+void SourceIndexer__debugScopeTree(SourceIndexer *self, const char* inBaseDir, StreamWriter *streamWriter);
 

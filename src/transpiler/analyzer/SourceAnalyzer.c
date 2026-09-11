@@ -10,6 +10,7 @@
 // #include "stdlib/filesystem/readFile.h"
 #include "stdlib/filesystem/pathUtils.h"
 #include "stdlib/filesystem/statUtils.h"
+#include "stdlib/time/StopWatch.h"
 
 #include <dirent.h>
 #include <string.h>
@@ -241,6 +242,27 @@ void SourceAnalyzer__scanFromMainFile(SourceAnalyzer *self, const char *inEntryF
   PointerHeapArray__free(&reusedListStr);
 
 
+
+  // only handle the relevant files
+  {
+    // start from the input file
+
+    AnalyzedFile* inputFile = HashMap__get(self->filesMap, inEntryFilepath);
+    if (inputFile)
+    {
+      // inputFile->indexer
+
+      // -> use includes
+      // -> if LC/C file
+      // ---> match declarations/calls <-> definitions/functions
+      // -> if H file
+      // ---> match definitions/functions <-> declarations/calls
+
+    }
+  }
+
+
+
   {
     // fill the container
     {
@@ -249,10 +271,14 @@ void SourceAnalyzer__scanFromMainFile(SourceAnalyzer *self, const char *inEntryF
 
       for (unsigned int ii = 0; ii < totalKeys; ++ii)
       {
+        // AnalyzedFile* currFile = allItems[ii].value;
+
+        // // currFile->indexer
+
+
         PointerHeapArray__pushBack(self->depSortedAnalyzed, allItems[ii].value);
       }
 
-      // free(allKeys);
       free(allItems);
     }
 
@@ -346,6 +372,9 @@ int SourceAnalyzer__scanFile(SourceAnalyzer *self, const char *inFilepath, Point
 
   printf("SCANFILE: %s\n", inFilepath);
 
+  StopWatch* stopWatch = StopWatch__create();
+  StopWatch__start(stopWatch);
+
   AnalyzedFile *analyzedFile = AnalyzedFile__create(self->parser, inFilepath);
 
   // if (!analyzedFile)
@@ -369,6 +398,12 @@ int SourceAnalyzer__scanFile(SourceAnalyzer *self, const char *inFilepath, Point
     if (!analyzedFile)
     {
       fprintf(stderr, "FAILED TO ANALYZE A FILE! -> %s\n", inFilepath);
+
+      StopWatch__stop(stopWatch);
+      const double timeInSec = StopWatch__getTime(stopWatch);
+      printf("   -> %lf sec\n", timeInSec);
+      StopWatch__free(&stopWatch);
+
       return -1;
     }
   // }
@@ -437,6 +472,12 @@ int SourceAnalyzer__scanFile(SourceAnalyzer *self, const char *inFilepath, Point
 
         char* tmpPath = Path__join(2, currFolderPath, currRawImport);
 
+        if (HashMap__contains(self->filesMap, tmpPath) != 0)
+        {
+          free(tmpPath);
+          continue;
+        }
+
         if (HashMap__contains(self->filesMap, tmpPath) == 0 && Stat__pathExist(tmpPath))
         {
           HashSet__set(self->nextFileToScanSet, tmpPath);
@@ -476,6 +517,10 @@ int SourceAnalyzer__scanFile(SourceAnalyzer *self, const char *inFilepath, Point
     }
   }
 
+  StopWatch__stop(stopWatch);
+  const double timeInSec = StopWatch__getTime(stopWatch);
+  printf("   -> %lf sec\n", timeInSec);
+  StopWatch__free(&stopWatch);
 
   return 0;
 }

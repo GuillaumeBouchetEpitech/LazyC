@@ -44,6 +44,7 @@ int main(int argc, char **argv)
   buildOpts.inOutputDir = cmdOpts->outputDir;
   buildOpts.inIncludePath = cmdOpts->includePath;
   buildOpts.inLibraryPath = cmdOpts->libraryPath;
+  buildOpts.doBuild = 1;
 
   if (BuildCmakeConfig__generateCmakeFile(&buildOpts) != 0) {
     panic("could generate a CMakeFile");

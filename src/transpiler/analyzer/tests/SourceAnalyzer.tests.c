@@ -20,7 +20,7 @@ static void SourceAnalyzer_can_be_created_and_freed() {
   assert(newAnalyzer == NULL);
 }
 
-static void _analyzeProject(unsigned int testFolderLen, const char* inSourceFilepath)
+static void _analyzeProject(unsigned int testFolderLen, const char* inBaseDir, const char* inSourceFilepath)
 {
   SourceAnalyzer* newAnalyzer = SourceAnalyzer__create();
   assert(newAnalyzer != NULL);
@@ -98,7 +98,7 @@ static void _analyzeProject(unsigned int testFolderLen, const char* inSourceFile
         memset(buffer, 0, 1024);
         snprintf(buffer, 1024, "%s.scope.debug", allAnalyzed[ii]);
         StreamWriter* streamWriter = StreamWriter__create(buffer);
-        AnalyzedFile__debugScopeTree(currAnalyzed, streamWriter);
+        AnalyzedFile__debugScopeTree(currAnalyzed, inBaseDir, streamWriter);
         StreamWriter__free(&streamWriter);
       }
 
@@ -118,19 +118,19 @@ static void SourceAnalyzer_can_scan_folder_from_main_file() {
 
   {
     char* sourceFilepath = Path__join(2, testFolder, "tests-assets/simple/main.c");
-    _analyzeProject(testFolderLen, sourceFilepath);
+    _analyzeProject(testFolderLen, testFolder, sourceFilepath);
     free(sourceFilepath);
   }
 
   {
     char* sourceFilepath = Path__join(2, testFolder, "tests-assets/comptime-comments/main.lc");
-    _analyzeProject(testFolderLen, sourceFilepath);
+    _analyzeProject(testFolderLen, testFolder, sourceFilepath);
     free(sourceFilepath);
   }
 
   {
     char* sourceFilepath = Path__join(2, testFolder, "tests-assets/many-includes/main.lc");
-    _analyzeProject(testFolderLen, sourceFilepath);
+    _analyzeProject(testFolderLen, testFolder, sourceFilepath);
     free(sourceFilepath);
   }
 

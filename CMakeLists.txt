@@ -37,6 +37,7 @@ if (build_target STREQUAL test)
     ./src/stdlib/strings/replaceAll.c
     ./src/stdlib/strings/replaceAll2.c
     ./src/stdlib/strings/trimStr.c
+    ./src/stdlib/time/StopWatch.c
     ./src/stdlib/strings/tests/replaceAll2.tests.c
     ./src/stdlib/sub-process/executeCommand.c
     ./src/stdlib/sub-process/tests/executeCommand.tests.c
@@ -49,6 +50,7 @@ if (build_target STREQUAL test)
     ./src/transpiler/analyzer/tests/SourceAnalyzer.tests.c
     ./src/transpiler/analyzer/internals/parser/tests/SourceParser.tests.c
     ./src/transpiler/analyzer/internals/parser/SourceParser.c
+    ./src/transpiler/analyzer/internals/parser/internals/SourceParsedFile.c
     ./src/transpiler/analyzer/internals/tests/AnalyzedFile.test.c
     ./src/transpiler/analyzer/internals/AnalyzedFile.c
     ./src/transpiler/analyzer/internals/indexer/SourceIndexer.c
@@ -102,12 +104,14 @@ else()
     ./src/stdlib/strings/replaceAll.c
     ./src/stdlib/strings/replaceAll2.c
     ./src/stdlib/strings/trimStr.c
+    ./src/stdlib/time/StopWatch.c
     ./src/stdlib/sub-process/executeCommand.c
     ./src/build-system/BuildCmakeConfig.c
     ./src/cli-arg-parser/CommandLineParserV2.c
     ./src/main.c
     ./src/transpiler/analyzer/SourceAnalyzer.c
     ./src/transpiler/analyzer/internals/parser/SourceParser.c
+    ./src/transpiler/analyzer/internals/parser/internals/SourceParsedFile.c
     ./src/transpiler/analyzer/internals/AnalyzedFile.c
     ./src/transpiler/analyzer/internals/indexer/SourceIndexer.c
     ./src/transpiler/analyzer/internals/indexer/internals/VarDef.c

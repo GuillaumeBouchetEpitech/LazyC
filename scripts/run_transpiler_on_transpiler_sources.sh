@@ -36,7 +36,17 @@ rm -rf "${PWD}/output"
 find ./src/ -name .generated -type d -type d
 find ./src/ -name .generated -type d -type d -exec bash -c ' rm -rf "{}" ' \;
 
-gdb -ex run --args ./bin/exec \
+# gdb -ex run --args ./bin/exec \
+#   "--base-dir=${PWD}/src/" \
+#   "--input-file=${PWD}/src/main.c" \
+#   "--output-dir=${PWD}/output" \
+#   "--add-include-path=${PWD}/third_parties/tree-sitter-lazy-c/bindings/c" \
+#   "--add-library-path=${PWD}/third_parties/tree-sitter-lazy-c/build-native/tree-sitter-lazy_c.a" \
+#   "--add-include-path=${PWD}/third_parties/tree-sitter/lib/include" \
+#   "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
+#   || exit 1
+
+./bin/exec \
   "--base-dir=${PWD}/src/" \
   "--input-file=${PWD}/src/main.c" \
   "--output-dir=${PWD}/output" \

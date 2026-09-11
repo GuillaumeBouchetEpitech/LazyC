@@ -19,6 +19,7 @@
 #include "stdlib/strings/StringBuffer.h"
 #include "stdlib/strings/trimStr.h"
 #include "stdlib/sub-process/executeCommand.h"
+#include "stdlib/time/StopWatch.h"
 #include "stdlib/core/panic.h"
 
 #include <stdlib.h>
@@ -33,6 +34,7 @@ typedef struct Transpiler {
   char* outputDir;
   SourceAnalyzer* analyzer;
 
+  HashSet* alreadyProcessedFiles;
   HashSet* allGeneratedFiles;
 
   // HashMap<csring, HashSet>
@@ -89,6 +91,7 @@ Transpiler* Transpiler__create(
 
 
 
+  newTranspiler->alreadyProcessedFiles = HashSet__preAllocate(32);
   newTranspiler->allGeneratedFiles = HashSet__preAllocate(32);
 
   newTranspiler->allExtraIncludesPerFiles = HashMap__preAllocate(32);
@@ -139,6 +142,7 @@ void Transpiler__free(Transpiler** self)
     HashMap__free(&(*self)->allExtraIncludesPerFiles);
   }
 
+  HashSet__free(&(*self)->alreadyProcessedFiles);
   HashSet__free(&(*self)->allGeneratedFiles);
 
   SourceAnalyzer__free(&(*self)->analyzer);
@@ -186,7 +190,7 @@ int Transpiler__applyDebug(Transpiler* self)
       memset(buffer, 0, 1024);
       snprintf(buffer, 1024, "%s.scope.debug", currAnalyzed->filepath);
       StreamWriter* streamWriter = StreamWriter__create(buffer);
-      AnalyzedFile__debugScopeTree(currAnalyzed, streamWriter);
+      AnalyzedFile__debugScopeTree(currAnalyzed, self->baseDir, streamWriter);
       StreamWriter__free(&streamWriter);
     }
 
@@ -763,8 +767,18 @@ const char* k_queryExportedFuncDefStr = "\n"
 static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnalyzedFile)
 {
   const char* filepath = AnalyzedFile__getFilepath(inAnalyzedFile);
+
+  if (HashSet__contains(self->alreadyProcessedFiles, filepath))
+  {
+    return 0;
+  }
+  HashSet__set(self->alreadyProcessedFiles, filepath);
+
   // printf(" -> processing file:\n   -> \"%s\"\n", filepath);
   printf(" -> processing file: \"%s\"\n", filepath);
+
+  StopWatch* stopWatch = StopWatch__create();
+  StopWatch__start(stopWatch);
 
   // self->baseDir
   // self->entryFilepath
@@ -828,7 +842,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
         char* tmpContent = strndup(srcStr + 1, contentSize - 2);
         char* tmpExtName = Path__extname(tmpContent);
 
-        printf(" IMPORT_SOURCE ---> {%s} (%s)\n", tmpContent, tmpExtName);
+        // printf(" IMPORT_SOURCE ---> {%s} (%s)\n", tmpContent, tmpExtName);
 
         if (
           strcmp(tmpExtName, ".c") == 0 ||
@@ -854,13 +868,13 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
             PointerHeapArray__pushBack(allEdits, newEdit);
           }
 
-          printf("  -> HAS EDIT ---> replacement=[%s]\n", buffer);
+          // printf("  -> HAS EDIT ---> replacement=[%s]\n", buffer);
 
           StringBuffer__free(&strbuffer);
         }
         else
         {
-          printf("  => NO EDIT\n");
+          // printf("  => NO EDIT\n");
         }
 
         // SourceIndexer__addImport(self->indexer, tmpContent);
@@ -1495,7 +1509,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
             snprintf(headerFilepath, bufSize, "%s.h", tmpStr);
             free(tmpStr);
 
-            printf(" -> headerFilepath=%s\n", headerFilepath);
+            // printf(" -> headerFilepath=%s\n", headerFilepath);
 
             free(relPath);
             relPath = headerFilepath;
@@ -1754,6 +1768,12 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
   free(outFilepath);
   free(inputFilepathExt);
   free(outSrcFolder);
+
+  StopWatch__stop(stopWatch);
+  const double timeInSec = StopWatch__getTime(stopWatch);
+  printf("   -> %lf sec\n", timeInSec);
+  StopWatch__free(&stopWatch);
+
   return 0;
 }
 
@@ -1779,6 +1799,19 @@ PointerHeapArray* Transpiler__getOutputSource(const Transpiler* self)
     if (strstr(currFilepath, "/.generated/comptime.main.c") != NULL)
     {
       continue;
+    }
+
+    {
+      char* currExt = Path__extname(currFilepath);
+      int isHeaderFile = (strcmp(currExt, ".h") == 0) ? 1 : 0;
+      free(currExt);
+
+      // must skip the header files
+      if (isHeaderFile == 1)
+      {
+        // printf(" -> SKIPPED: %s\n", currFilepath);
+        continue;
+      }
     }
 
     // {

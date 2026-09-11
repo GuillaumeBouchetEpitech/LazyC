@@ -1,6 +1,6 @@
 IMPORTS (total: 2)
--> filepath=/home/barbie/Documents/_PROGRAMMING/github/perso/LazyC/src/transpiler/analyzer/internals/tests/tests-assets/omg.h
--> filepath=/home/barbie/Documents/_PROGRAMMING/github/perso/LazyC/src/transpiler/analyzer/internals/tests/tests-assets/lol/mdr.h
+-> filepath=tests-assets/omg.h
+-> filepath=tests-assets/lol/mdr.h
 TEXTS_TO_REPLACE (total: 0)
 TYPES_TO_RESOLVE (total: 0)
 |--- [L2_C0]->[L14_C0] [ROOT_SCOPE]

@@ -28,6 +28,6 @@ const char *AnalyzedFile__getFilepath(const AnalyzedFile *self);
 const SourceIndexer *AnalyzedFile__getIndexer(const AnalyzedFile *self);
 const SourceParsedFile* AnalyzedFile__getParsedFile(const AnalyzedFile *self);
 
-void AnalyzedFile__debugScopeTree(const AnalyzedFile *self, StreamWriter *inStreamWriter);
+void AnalyzedFile__debugScopeTree(const AnalyzedFile *self, const char* inBaseDir, StreamWriter *inStreamWriter);
 void AnalyzedFile__debugTree(const AnalyzedFile *self, StreamWriter *streamWriter);
 

@@ -18,7 +18,7 @@ static void executeCommand_can_run_a_simple_list_command() {
   char* currentFolder = Path__dirname(__FILE__);
   printf("currentFolder %s\n", currentFolder);
 
-  char const * argv[] = { "/bin/ls", "-lah", NULL };
+  char *const argv[] = { "/bin/ls", "-lah", NULL };
 
   const int status = executeCommand("/bin/ls", argv, currentFolder);
   assert(status == 0);

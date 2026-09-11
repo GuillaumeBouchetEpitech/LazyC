@@ -10,7 +10,8 @@
     "**/.vscode": true,
     "**/node_modules": true,
     "**/.vs": true,
-    "**/.git": true
+    "**/.git": true,
+    "**/output": true
   },
   "C_Cpp.exclusionPolicy": "checkFilesAndFolders",
 }

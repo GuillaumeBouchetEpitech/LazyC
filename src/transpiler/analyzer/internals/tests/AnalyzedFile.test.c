@@ -35,7 +35,7 @@ static void AnalyzedFile_can_be_created_and_freed() {
 
 
 
-static void _analyzeProject(SourceParser* parser, const char* inSourceFilepath)
+static void _analyzeProject(SourceParser* parser, const char* inBaseDir, const char* inSourceFilepath)
 {
   char expectedMatchesFilepath[1024];
   char debugMatchesFilepath[1024];
@@ -74,7 +74,7 @@ static void _analyzeProject(SourceParser* parser, const char* inSourceFilepath)
 
   {
     StreamWriter* streamWriter = StreamWriter__create(debugMatchesFilepath);
-    AnalyzedFile__debugScopeTree(newAnalyzed, streamWriter);
+    AnalyzedFile__debugScopeTree(newAnalyzed, inBaseDir, streamWriter);
     StreamWriter__free(&streamWriter);
   }
 
@@ -103,19 +103,19 @@ static void AnalyzedFile_can_analyze_source_file__simple_C() {
 
   {
     char* sourceFilepath = Path__join(2, testFolder, "tests-assets/simple.c");
-    _analyzeProject(parser, sourceFilepath);
+    _analyzeProject(parser, testFolder, sourceFilepath);
     free(sourceFilepath);
   }
 
   {
     char* sourceFilepath = Path__join(2, testFolder, "tests-assets/comptime-comments.lc");
-    _analyzeProject(parser, sourceFilepath);
+    _analyzeProject(parser, testFolder, sourceFilepath);
     free(sourceFilepath);
   }
 
   {
     char* sourceFilepath = Path__join(2, testFolder, "tests-assets/importing-files.lc");
-    _analyzeProject(parser, sourceFilepath);
+    _analyzeProject(parser, testFolder, sourceFilepath);
     free(sourceFilepath);
   }
 
