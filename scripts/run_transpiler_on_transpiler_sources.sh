@@ -24,11 +24,23 @@ echo ""
 #   "--add-include-path=${PROJECT_FOLDER_PATH}/assets/samples/small-sample/src/" \
 #   || exit 1
 
-if [ ! -f ./bin/exec ];
-then
-  echo "no ./bin/exec binary!!!"
-  exit 1
-fi
+
+
+
+
+
+
+# if [ ! -f ./bin/exec ];
+# then
+#   echo "no ./bin/exec binary!!!"
+#   exit 1
+# fi
+
+echo ""
+echo "####################"
+echo "# BUILD TRANSPILER #"
+echo "####################"
+echo ""
 
 rm -rf "${PWD}/output"
 
@@ -46,7 +58,17 @@ find ./src/ -name .generated -type d -type d -exec bash -c ' rm -rf "{}" ' \;
 #   "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
 #   || exit 1
 
-./bin/exec \
+# ./bin/exec \
+#   "--base-dir=${PWD}/src/" \
+#   "--input-file=${PWD}/src/main.c" \
+#   "--output-dir=${PWD}/output" \
+#   "--add-include-path=${PWD}/third_parties/tree-sitter-lazy-c/bindings/c" \
+#   "--add-library-path=${PWD}/third_parties/tree-sitter-lazy-c/build-native/tree-sitter-lazy_c.a" \
+#   "--add-include-path=${PWD}/third_parties/tree-sitter/lib/include" \
+#   "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
+#   || exit 1
+
+./_tmp/c-transpiler/bin/exec \
   "--base-dir=${PWD}/src/" \
   "--input-file=${PWD}/src/main.c" \
   "--output-dir=${PWD}/output" \
@@ -55,6 +77,88 @@ find ./src/ -name .generated -type d -type d -exec bash -c ' rm -rf "{}" ' \;
   "--add-include-path=${PWD}/third_parties/tree-sitter/lib/include" \
   "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
   || exit 1
+
+echo ""
+echo "#######"
+echo "# RUN #"
+echo "#######"
+echo ""
+
+rm -rf "${PWD}/output-second"
+
+# cleanup ".generated" folder(s)
+find ./src/ -name .generated -type d -type d
+find ./src/ -name .generated -type d -type d -exec bash -c ' rm -rf "{}" ' \;
+
+# # gdb -ex run --args ./output/bin/exec \
+# #   "--base-dir=${PWD}/src/" \
+# #   "--input-file=${PWD}/src/main.c" \
+# #   "--output-dir=${PWD}/output-second" \
+# #   "--add-include-path=${PWD}/third_parties/tree-sitter-lazy-c/bindings/c" \
+# #   "--add-library-path=${PWD}/third_parties/tree-sitter-lazy-c/build-native/tree-sitter-lazy_c.a" \
+# #   "--add-include-path=${PWD}/third_parties/tree-sitter/lib/include" \
+# #   "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
+# #   || exit 1
+
+./output/bin/exec \
+  "--base-dir=${PWD}/src/" \
+  "--input-file=${PWD}/src/main.c" \
+  "--output-dir=${PWD}/output-second" \
+  "--add-include-path=${PWD}/third_parties/tree-sitter-lazy-c/bindings/c" \
+  "--add-library-path=${PWD}/third_parties/tree-sitter-lazy-c/build-native/tree-sitter-lazy_c.a" \
+  "--add-include-path=${PWD}/third_parties/tree-sitter/lib/include" \
+  "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
+  || exit 1
+
+echo ""
+echo "####################"
+echo "# BUILD UNIT-TESTS #"
+echo "####################"
+echo ""
+
+# cleanup ".generated" folder(s)
+find ./src/ -name .generated -type d -type d
+find ./src/ -name .generated -type d -type d -exec bash -c ' rm -rf "{}" ' \;
+
+# ./output-second/bin/exec \
+#   "--base-dir=${PWD}/src/" \
+#   "--input-file=${PWD}/src/main.tests.c" \
+#   "--output-dir=${PWD}/output-second-test" \
+#   "--add-include-path=${PWD}/third_parties/tree-sitter-lazy-c/bindings/c" \
+#   "--add-library-path=${PWD}/third_parties/tree-sitter-lazy-c/build-native/tree-sitter-lazy_c.a" \
+#   "--add-include-path=${PWD}/third_parties/tree-sitter/lib/include" \
+#   "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
+#   --handle-tests=1 \
+#   || exit 1
+./output-second/bin/exec \
+  "--base-dir=${PWD}/src/" \
+  "--input-file=${PWD}/src/main.tests.c" \
+  "--output-dir=${PWD}/output-second" \
+  "--add-include-path=${PWD}/third_parties/tree-sitter-lazy-c/bindings/c" \
+  "--add-library-path=${PWD}/third_parties/tree-sitter-lazy-c/build-native/tree-sitter-lazy_c.a" \
+  "--add-include-path=${PWD}/third_parties/tree-sitter/lib/include" \
+  "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
+  --handle-tests=1 \
+  || exit 1
+
+echo ""
+echo "##################"
+echo "# RUN UNIT-TESTS #"
+echo "##################"
+echo ""
+
+# copy the tests-assets folders
+find ./src -name tests-assets -type d
+find ./src -name tests-assets -type d -exec bash -c ' cp -rf "{}" "./output-second/{}" ' \;
+
+# cleanup "output" folder(s)
+find ./output-second/src/ -name output -type d
+find ./output-second/src/ -name output -type d -exec bash -c ' rm -rf "{}" ' \;
+
+./output-second/bin/exec || exit 1
+
+
+
 
 # if [ ! -f ./last-known-good/exec ];
 # then

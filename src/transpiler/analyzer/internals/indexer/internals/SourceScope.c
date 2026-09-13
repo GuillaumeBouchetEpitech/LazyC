@@ -22,21 +22,13 @@ SourceScope *SourceScope__create(NodePos inStartPos, NodePos inEndPos)
     return NULL;
   }
 
+  // self->allStructDef = PointerHeapArray__preAllocate(32);
+  self->allVarDef = HeapArray<VarDef>::preAllocated(32);
+  self->allFuncCalls = HeapArray<IdentifiedRef>::preAllocated(32);
+  self->allComptimeCalls = HeapArray<ComptimeCallRef>::preAllocated(32);
+  self->allVarRefs = HeapArray<IdentifiedRef>::preAllocated(32);
   self->allChildrenScopes = PointerHeapArray__preAllocate(32);
-
-  // self->allVarDef2 = HeapArray<VarDef>::preAllocated(32);
-
-  self->allVarDef = PointerHeapArray__preAllocate(32);
-  self->allFuncCalls = PointerHeapArray__preAllocate(32);
-  self->allComptimeCalls = PointerHeapArray__preAllocate(32);
-  self->allVarRefs = PointerHeapArray__preAllocate(32);
-  self->allStructDef = PointerHeapArray__preAllocate(32);
-  if (!self->allChildrenScopes ||
-      !self->allVarDef ||
-      !self->allFuncCalls ||
-      !self->allComptimeCalls ||
-      !self->allVarRefs ||
-      !self->allStructDef)
+  if (!self->allChildrenScopes)
   {
     SourceScope__free(&self);
     return NULL;
@@ -54,18 +46,15 @@ void SourceScope__free(SourceScope **self)
   {
     return;
   }
-  // if ((*self)->funcName)
-  // {
+
   free((*self)->funcName);
-  // }
-  PointerHeapArray__free(&(*self)->allStructDef);
+  (*self)->funcName = NULL;
 
-  // HeapArray<VarDef>::free(&(*self)->allVarDef2);
-
-  PointerHeapArray__free(&(*self)->allVarDef);
-  PointerHeapArray__free(&(*self)->allFuncCalls);
-  PointerHeapArray__free(&(*self)->allComptimeCalls);
-  PointerHeapArray__free(&(*self)->allVarRefs);
+  // PointerHeapArray__free(&(*self)->allStructDef);
+  HeapArray<VarDef>::free(&(*self)->allVarDef);
+  HeapArray<IdentifiedRef>::free(&(*self)->allFuncCalls);
+  HeapArray<ComptimeCallRef>::free(&(*self)->allComptimeCalls);
+  HeapArray<IdentifiedRef>::free(&(*self)->allVarRefs);
   PointerHeapArray__free(&(*self)->allChildrenScopes);
   free(*self);
   *self = NULL;

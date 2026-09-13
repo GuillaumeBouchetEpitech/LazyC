@@ -4,32 +4,28 @@
 #include <stdlib.h>
 #include <string.h>
 
-IdentifiedRef *IdentifiedRef__create(
+IdentifiedRef IdentifiedRef__create(
     NodePos inStartPos,
     NodePos inEndPos,
     const char *inVarName
 ) {
-  IdentifiedRef *newIdentifiedRef = calloc(1, sizeof(IdentifiedRef));
-  if (!newIdentifiedRef)
-  {
-    return NULL;
-  }
-  newIdentifiedRef->startPos = inStartPos;
-  newIdentifiedRef->endPos = inEndPos;
+  IdentifiedRef newIdentifiedRef;
+  memset(&newIdentifiedRef, 0, sizeof(IdentifiedRef));
 
-  newIdentifiedRef->varName = strdup(inVarName);
+  newIdentifiedRef.startPos = inStartPos;
+  newIdentifiedRef.endPos = inEndPos;
+
+  newIdentifiedRef.varName = strdup(inVarName);
 
   return newIdentifiedRef;
 }
 
-void IdentifiedRef__free(IdentifiedRef **self)
+void IdentifiedRef__free(IdentifiedRef *self)
 {
-  if (!self || !*self)
+  if (!self)
   {
     return;
   }
-  free((*self)->varName);
-  // free((*self)->typeName);
-  free(*self);
-  *self = NULL;
+  free(self->varName);
+  memset(self, 0, sizeof(IdentifiedRef));
 }

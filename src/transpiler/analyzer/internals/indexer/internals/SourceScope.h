@@ -3,11 +3,10 @@
 
 #include "../../parser/SourceParser.h"
 
-// #include "./VarDef.h"
-// #include "stdlib/collections/HeapArray.lc"
-
-// forward declaration
-typedef struct PointerHeapArray PointerHeapArray;
+#include "./VarDef.h"
+#include "./IdentifiedRef.h"
+#include "stdlib/collections/HeapArray.lc"
+#include "stdlib/collections/PointerHeapArray.h"
 
 typedef enum ScopeType {
   ROOT_SCOPE,
@@ -23,13 +22,11 @@ typedef struct SourceScope
   NodePos startPos;
   NodePos endPos;
 
-  // HeapArray<VarDef>* allVarDef2;
-
-  PointerHeapArray *allVarDef;    // <- TODO: must be sorted by startPos.index
-  PointerHeapArray *allFuncCalls; // <- TODO: must be sorted by startPos.index
-  PointerHeapArray *allComptimeCalls; // <- TODO: must be sorted by startPos.index
-  PointerHeapArray *allVarRefs;   // <- TODO: must be sorted by startPos.index
-  PointerHeapArray *allStructDef; // <- TODO: must be sorted by startPos.index
+  // PointerHeapArray *allStructDef;
+  HeapArray<VarDef> allVarDef;
+  HeapArray<IdentifiedRef> allFuncCalls;
+  HeapArray<ComptimeCallRef> allComptimeCalls;
+  HeapArray<IdentifiedRef> allVarRefs;
 
   char *funcName; // function only?
 

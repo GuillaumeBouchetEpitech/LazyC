@@ -2,7 +2,7 @@
 # MAIN FLOW
 
 ```mermaid
-flowchart LR
+flowchart
   start((start))
   stop((stop))
 
@@ -56,7 +56,14 @@ flowchart
   Transpiler --> BuildCmakeConfig
   Transpiler --> SourceAnalyzer
   SourceAnalyzer --> AnalyzedFile
+  SourceAnalyzer --> SourceParser
   AnalyzedFile --> SourceIndexer
-  AnalyzedFile --> SourceParser
+  SourceIndexer --> ComptimeCallRef
+  SourceIndexer --> IdentifiedRef
+  SourceIndexer --> SourceScope
+  SourceIndexer --> VarDef
+  AnalyzedFile --> SourceParsed
+  SourceParsed --> QueryMatchData
+  SourceParser -.-> SourceParsed
 
 ```

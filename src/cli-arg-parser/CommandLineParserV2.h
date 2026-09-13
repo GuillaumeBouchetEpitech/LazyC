@@ -10,6 +10,7 @@ typedef struct CommandLineOptsV2 {
   char* outputDir;
   PointerHeapArray* includePath;
   PointerHeapArray* libraryPath;
+  int handleTests;
 } CommandLineOptsV2;
 
 

@@ -29,6 +29,8 @@ typedef struct SourceAnalyzer
   // PointerHeapArray<AnalyzedFile>
   PointerHeapArray* depSortedAnalyzed;
 
+  int handleTests;
+
 } SourceAnalyzer;
 
 
@@ -37,7 +39,7 @@ AnalyzedFile *AnalyzedFile__create(SourceParser *inParser, const char *inFilepat
 void AnalyzedFile__free(AnalyzedFile **self);
 
 // MARK: create
-SourceAnalyzer *SourceAnalyzer__create()
+SourceAnalyzer *SourceAnalyzer__create(int handleTests)
 {
   SourceAnalyzer *newAnalyzer = calloc(1, sizeof(SourceAnalyzer));
   if (!newAnalyzer)
@@ -52,6 +54,8 @@ SourceAnalyzer *SourceAnalyzer__create()
   newAnalyzer->nextFileToScanSet = HashSet__preAllocate(32);
   newAnalyzer->definitionToFileMap = HashMap__preAllocate(32);
   newAnalyzer->depSortedAnalyzed = PointerHeapArray__preAllocate(32);
+
+  newAnalyzer->handleTests = handleTests != 0 ? 1 : 0;
 
   if (!newAnalyzer->parser ||
       !newAnalyzer->filesMap ||
@@ -361,19 +365,29 @@ int SourceAnalyzer__scanFile(SourceAnalyzer *self, const char *inFilepath, Point
   HashSet__remove(self->nextFileToScanSet, inFilepath);
 
   {
-    if (
+    const int isTestFile = (
       strstr(inFilepath, ".tests.c") != NULL ||
       strstr(inFilepath, ".tests.h") != NULL ||
       strstr(inFilepath, ".tests.lc") != NULL
+    ) ? 1 : 0;
+
+    if (
+      // ((self->handleTests == 1) && (isTestFile == 0)) ||
+      // ((self->handleTests == 0) && (isTestFile == 1))
+      // // isTestFile == 1
+      isTestFile == 1 && self->handleTests == 0
     ) {
+      printf("SKIPPED-FILE: %s\n", inFilepath);
+      printf(" - self->handleTests: %d\n", self->handleTests);
+      printf(" -        isTestFile: %d\n", isTestFile);
       return 0;
     }
   }
 
   printf("SCANFILE: %s\n", inFilepath);
 
-  StopWatch* stopWatch = StopWatch__create();
-  StopWatch__start(stopWatch);
+  StopWatch stopWatch = StopWatch__create();
+  StopWatch__start(&stopWatch);
 
   AnalyzedFile *analyzedFile = AnalyzedFile__create(self->parser, inFilepath);
 
@@ -399,8 +413,8 @@ int SourceAnalyzer__scanFile(SourceAnalyzer *self, const char *inFilepath, Point
     {
       fprintf(stderr, "FAILED TO ANALYZE A FILE! -> %s\n", inFilepath);
 
-      StopWatch__stop(stopWatch);
-      const double timeInSec = StopWatch__getTime(stopWatch);
+      StopWatch__stop(&stopWatch);
+      const double timeInSec = StopWatch__getTime(&stopWatch);
       printf("   -> %lf sec\n", timeInSec);
       StopWatch__free(&stopWatch);
 
@@ -517,8 +531,8 @@ int SourceAnalyzer__scanFile(SourceAnalyzer *self, const char *inFilepath, Point
     }
   }
 
-  StopWatch__stop(stopWatch);
-  const double timeInSec = StopWatch__getTime(stopWatch);
+  StopWatch__stop(&stopWatch);
+  const double timeInSec = StopWatch__getTime(&stopWatch);
   printf("   -> %lf sec\n", timeInSec);
   StopWatch__free(&stopWatch);
 
@@ -550,3 +564,7 @@ const PointerHeapArray *SourceAnalyzer__getSortedAnalyzedFiles(const SourceAnaly
   return self->depSortedAnalyzed;
 }
 
+SourceParser* SourceAnalyzer__getParser(SourceAnalyzer *self)
+{
+  return self->parser;
+}

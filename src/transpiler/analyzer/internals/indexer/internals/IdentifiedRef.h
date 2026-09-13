@@ -16,9 +16,9 @@ typedef struct IdentifiedRef
 
 } IdentifiedRef;
 
-IdentifiedRef *IdentifiedRef__create(
+IdentifiedRef IdentifiedRef__create(
     NodePos inStartPos,
     NodePos inEndPos,
     const char *inVarName);
 
-void IdentifiedRef__free(IdentifiedRef **self);
+void IdentifiedRef__free(IdentifiedRef *self);

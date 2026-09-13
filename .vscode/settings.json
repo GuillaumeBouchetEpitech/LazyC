@@ -2,6 +2,12 @@
   "files.associations": {
     "*.lc": "c"
   },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/*.code-search": true,
+    "**/output": true
+  },
   "cSpell.words": [
     "comptime"
   ],

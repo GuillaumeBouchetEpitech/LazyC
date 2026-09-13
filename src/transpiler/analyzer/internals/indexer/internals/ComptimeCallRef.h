@@ -3,8 +3,8 @@
 
 #include "../../parser/SourceParser.h"
 
-// forward declaration
-typedef struct PointerHeapArray PointerHeapArray;
+#include "stdlib/collections/HeapArray.lc"
+#include "stdlib/strings/StringData.h"
 
 typedef struct ComptimeCallRef
 {
@@ -14,17 +14,16 @@ typedef struct ComptimeCallRef
 
   char *varName;
   char *argsValue;
-  // PointerHeapArray<cstring>
-  PointerHeapArray *argsList;
+  HeapArray<StringData> argsList;
 
   char *signature;
 
 } ComptimeCallRef;
 
-ComptimeCallRef *ComptimeCallRef__create(
+ComptimeCallRef ComptimeCallRef__create(
     NodePos inStartPos,
     NodePos inEndPos,
     const char *inVarName,
     const char *inArgsValue);
 
-void ComptimeCallRef__free(ComptimeCallRef **self);
+void ComptimeCallRef__free(ComptimeCallRef *self);

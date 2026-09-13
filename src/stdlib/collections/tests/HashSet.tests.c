@@ -136,7 +136,7 @@ static void HashSet_can_get_all_the_keys() {
     snprintf(buffer, 512, "test-%d", ii + 1);
 
     int wasFound = 0;
-    for (int jj = 0; jj < totalKeys; ++jj) {
+    for (unsigned int jj = 0; jj < totalKeys; ++jj) {
       if (strcmp(buffer, allkeys[jj]) == 0) {
         wasFound = 1;
         break;

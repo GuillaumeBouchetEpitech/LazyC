@@ -10,6 +10,7 @@ typedef struct BuildCmakeConfigOpts {
     PointerHeapArray *inIncludePath;
     PointerHeapArray *inLibraryPath;
     int doBuild;
+    int strictMode;
 } BuildCmakeConfigOpts;
 
 int BuildCmakeConfig__generateCmakeFile(const BuildCmakeConfigOpts *opts);

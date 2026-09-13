@@ -307,6 +307,8 @@ static void PointerHeapArray_can_insert_and_erase_data_at_index()
 
 static int _sortCallback(void *left, void *right, void *userData)
 {
+  (void)userData;
+
   const int* leftData = left;
   const int* rightData = right;
   return *rightData - *leftData; // ascending order
@@ -337,6 +339,7 @@ static void PointerHeapArray_can_sort_data_with_custom_funcPtr()
   }
 
   int wasSorted = PointerHeapArray__sortFromCallback(testPtrHeapArray, &_sortCallback, NULL);
+  assert(wasSorted == 1);
 
   for (long int ii = 0; ii < 10; ++ii)
   {

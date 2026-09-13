@@ -14,7 +14,7 @@
 
 
 static void SourceAnalyzer_can_be_created_and_freed() {
-  SourceAnalyzer* newAnalyzer = SourceAnalyzer__create();
+  SourceAnalyzer* newAnalyzer = SourceAnalyzer__create(0);
   assert(newAnalyzer != NULL);
   SourceAnalyzer__free(&newAnalyzer);
   assert(newAnalyzer == NULL);
@@ -22,7 +22,7 @@ static void SourceAnalyzer_can_be_created_and_freed() {
 
 static void _analyzeProject(unsigned int testFolderLen, const char* inBaseDir, const char* inSourceFilepath)
 {
-  SourceAnalyzer* newAnalyzer = SourceAnalyzer__create();
+  SourceAnalyzer* newAnalyzer = SourceAnalyzer__create(0);
   assert(newAnalyzer != NULL);
 
   printf(" -> inSourceFilepath: %s\n", inSourceFilepath);

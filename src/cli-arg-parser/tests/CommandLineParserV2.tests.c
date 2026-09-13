@@ -14,7 +14,7 @@
 
 static void CommandLineParserV2_can_parse_command_line_args() {
 
-  const char* tmpArgv[4] = {
+  char* const tmpArgv[4] = {
     "./bin/exec",
     "--base-dir=/lol/omg",
     "--input-file=/lol/omg/main.c",
@@ -35,7 +35,7 @@ static void CommandLineParserV2_can_parse_command_line_args() {
 
 static void CommandLineParserV2_can_parse_command_line_args_with_includepath_and_librarypath() {
 
-  const char* tmpArgv[6] = {
+  char* const tmpArgv[6] = {
     "./bin/exec",
     "--base-dir=/lol/omg",
     "--input-file=/lol/omg/main.c",

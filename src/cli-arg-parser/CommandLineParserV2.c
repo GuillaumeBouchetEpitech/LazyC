@@ -14,6 +14,7 @@ CommandLineOptsV2* CommandLineParserV2__parseArgs(int argc, char *const*argv)
   CommandLineOptsV2* newOpts = calloc(1, sizeof(CommandLineOptsV2));
   newOpts->includePath = PointerHeapArray__preAllocate(32);
   newOpts->libraryPath = PointerHeapArray__preAllocate(32);
+  newOpts->handleTests = 0;
 
   for (int ii = 1 ; ii < argc; ++ii)
   {
@@ -73,6 +74,12 @@ CommandLineOptsV2* CommandLineParserV2__parseArgs(int argc, char *const*argv)
     else if (strncmp(currArg, "--add-library-path", toDelim) == 0)
     {
       PointerHeapArray__pushBack(newOpts->libraryPath, delim + 1);
+    }
+    else if (strncmp(currArg, "--handle-tests", toDelim) == 0)
+    {
+      const int value = atoi(delim + 1);
+      printf("   -> handle-tests: %d\n", value);
+      newOpts->handleTests = value != 0 ? 1 : 0;
     }
     else
     {

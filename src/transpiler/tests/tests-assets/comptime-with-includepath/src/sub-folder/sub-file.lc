@@ -1,7 +1,7 @@
 
 #include "./with-generics/HeapArena.lc"
 
-#include "../test-about-vec3/math/Vec3.lc"
+// #include "../test-about-vec3/math/Vec3.lc"
 
 #include <stdio.h>
 

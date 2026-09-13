@@ -10,7 +10,8 @@ Transpiler *Transpiler__create(
     const char *inBaseDir,
     const char *inEntryFilepath,
     const char *inOutputDir,
-    PointerHeapArray* includePath);
+    PointerHeapArray* includePath,
+    int handleTests);
 
 void Transpiler__free(Transpiler **self);
 

@@ -1,11 +1,12 @@
 
-#include "AnalyzedFile.test.h"
+#include "AnalyzedFile.tests.h"
 
 #include "../AnalyzedFile.h"
 #include "../parser/SourceParser.h"
 
 #include "stdlib/filesystem/readFile.h"
 #include "stdlib/filesystem/pathUtils.h"
+#include "stdlib/filesystem/statUtils.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -79,12 +80,24 @@ static void _analyzeProject(SourceParser* parser, const char* inBaseDir, const c
   }
 
   {
+
+    // printf(" -> Stat__pathExist(expectedMatchesFilepath): %d\n", Stat__pathExist(expectedMatchesFilepath));
+    // printf(" -> Stat__pathExist(debugMatchesFilepath):    %d\n", Stat__pathExist(debugMatchesFilepath));
+
+    assert(Stat__pathExist(expectedMatchesFilepath) == 1);
+    assert(Stat__pathExist(debugMatchesFilepath) == 1);
+
     StringData expectedData;
     assert(readFile(expectedMatchesFilepath, &expectedData.data, &expectedData.len) >= 0);
+    assert(expectedData.data != NULL);
+    assert(expectedData.len > 0);
 
     StringData actualData;
     assert(readFile(debugMatchesFilepath, &actualData.data, &actualData.len) >= 0);
+    assert(actualData.data != NULL);
+    assert(actualData.len > 0);
 
+    assert(actualData.len == expectedData.len);
     assert(strcmp(actualData.data, expectedData.data) == 0);
 
     free(actualData.data);
@@ -118,6 +131,12 @@ static void AnalyzedFile_can_analyze_source_file__simple_C() {
     _analyzeProject(parser, testFolder, sourceFilepath);
     free(sourceFilepath);
   }
+
+  // {
+  //   char* sourceFilepath = Path__join(2, testFolder, "tests-assets/define-struct-union-enum-typedef.h");
+  //   _analyzeProject(parser, testFolder, sourceFilepath);
+  //   free(sourceFilepath);
+  // }
 
   SourceParser__free(&parser);
   free(testFolder);

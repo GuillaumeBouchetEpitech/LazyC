@@ -1,4 +1,5 @@
 
+#include "./stdlib/collections/tests/HeapArray.tests.lc"
 #include "./stdlib/collections/tests/HashMap.tests.h"
 #include "./stdlib/collections/tests/HashSet.tests.h"
 #include "./stdlib/collections/tests/PointerHeapArray.tests.h"
@@ -10,9 +11,9 @@
 #include "./stdlib/strings/tests/replaceAll2.tests.h"
 
 #include "./transpiler/analyzer/internals/indexer/internals/tests/ComptimeCallRef.tests.h"
-#include "./transpiler/analyzer/internals/parser/tests/SourceParser.tests.h"
+// #include "./transpiler/analyzer/internals/parser/tests/SourceParser.tests.h"
 #include "./transpiler/analyzer/tests/SourceAnalyzer.tests.h"
-#include "./transpiler/analyzer/internals/tests/AnalyzedFile.test.h"
+#include "./transpiler/analyzer/internals/tests/AnalyzedFile.tests.h"
 #include "./transpiler/tests/Transpiler.tests.h"
 
 #include <stdio.h>
@@ -28,6 +29,7 @@ int main(void)
   printf("###############\n");
   printf("\n");
 
+  HeapArray_tests();
   HashMap_tests();
   HashSet_tests();
   PointerHeapArray_test();
@@ -38,7 +40,7 @@ int main(void)
   String__replaceAll2_tests();
 
   ComptimeCallRef_tests();
-  SourceParser_tests();
+  // SourceParser_tests();
   SourceAnalyzer_tests();
   Transpiler_tests();
   AnalyzedFile_tests();

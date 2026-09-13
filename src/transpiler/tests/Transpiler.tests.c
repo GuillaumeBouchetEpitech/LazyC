@@ -40,7 +40,7 @@ static void Transpiler_can_transpile_a_project()
   // PointerHeapArray__pushBack(sourcesFilepaths, strdup("sub-folder/sub-file.c"));
   // PointerHeapArray__pushBack(sourcesFilepaths, strdup("sub-folder/sub-file.h"));
 
-  Transpiler* transpiler = Transpiler__create(tmpBaseDir, tmpEntryFilepath, tmpOutputDir, includePaths);
+  Transpiler* transpiler = Transpiler__create(tmpBaseDir, tmpEntryFilepath, tmpOutputDir, includePaths, 0);
   assert(transpiler != NULL);
 
   PointerHeapArray__free(&includePaths);
@@ -76,7 +76,7 @@ static void Transpiler_can_transpile_a_C_file_that_include_a_LC_file()
   // PointerHeapArray__pushBack(sourcesFilepaths, strdup("sub-folder/sub-file.c"));
   // PointerHeapArray__pushBack(sourcesFilepaths, strdup("sub-folder/sub-file.h"));
 
-  Transpiler* transpiler = Transpiler__create(tmpBaseDir, tmpEntryFilepath, tmpOutputDir, includePaths);
+  Transpiler* transpiler = Transpiler__create(tmpBaseDir, tmpEntryFilepath, tmpOutputDir, includePaths, 0);
   assert(transpiler != NULL);
 
   PointerHeapArray__free(&includePaths);
@@ -107,7 +107,7 @@ static void Transpiler_can_transpile_a_comptime_file_that_use_an_includepath_inc
 
   PointerHeapArray* includePaths = PointerHeapArray__preAllocate(32);
 
-  Transpiler* transpiler = Transpiler__create(tmpBaseDir, tmpEntryFilepath, tmpOutputDir, includePaths);
+  Transpiler* transpiler = Transpiler__create(tmpBaseDir, tmpEntryFilepath, tmpOutputDir, includePaths, 0);
   assert(transpiler != NULL);
 
   PointerHeapArray__free(&includePaths);

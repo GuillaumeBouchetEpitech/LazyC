@@ -6,9 +6,11 @@
 #include "./internals/ComptimeCallRef.h"
 #include "./internals/SourceScope.h"
 
+#include "stdlib/core/panic.h"
 #include "stdlib/collections/HashMap.h"
 #include "stdlib/collections/HashSet.h"
 #include "stdlib/collections/PointerHeapArray.h"
+#include "stdlib/collections/HeapArray.lc"
 #include "stdlib/filesystem/StreamWriter.h"
 
 #include <stdlib.h>
@@ -30,7 +32,8 @@ typedef struct ImportedFiles
   HashSet *filepathsSet;
   // set of path (not absolute nor relative path, very likely dependant on includepath)
   HashSet *rawFilepathsSet;
-} ImportedFiles;
+}
+ImportedFiles;
 
 typedef struct ComptimeFeatures
 {
@@ -38,7 +41,8 @@ typedef struct ComptimeFeatures
   HashSet *typesToResolve;
   // ex: "HeapArena<int>" -> "HeapArena__int"
   HashMap *textsToReplace;
-} ComptimeFeatures;
+}
+ComptimeFeatures;
 
 typedef struct SourceIndexer
 {
@@ -51,14 +55,10 @@ typedef struct SourceIndexer
 
   SourceScope *rootScope;
 
-  // PointerHeapArray<VarDef>
-  PointerHeapArray *allVarDef;
-  // PointerHeapArray<IdentifiedRef>
-  PointerHeapArray *allFuncCalls;
-  // PointerHeapArray<ComptimeCallRef>
-  PointerHeapArray *allComptimeCalls;
-  // PointerHeapArray<IdentifiedRef>
-  PointerHeapArray *allVarRefs;
+  HeapArray<VarDef> allVarDef;
+  HeapArray<IdentifiedRef> allFuncCalls;
+  HeapArray<ComptimeCallRef> allComptimeCalls;
+  HeapArray<IdentifiedRef> allVarRefs;
 
   HashSet *allRootDefs;
   HashSet *allDefs;
@@ -67,7 +67,8 @@ typedef struct SourceIndexer
 
   HashSet *allExportedDefsSet;
 
-} SourceIndexer;
+}
+SourceIndexer;
 
 // MARK: create
 SourceIndexer *SourceIndexer__create(NodePos inStartPos, NodePos inEndPos)
@@ -86,10 +87,10 @@ SourceIndexer *SourceIndexer__create(NodePos inStartPos, NodePos inEndPos)
 
   newIndexer->allScopes = PointerHeapArray__preAllocate(32);
   newIndexer->rootScope = SourceScope__create(inStartPos, inEndPos);
-  newIndexer->allVarDef = PointerHeapArray__preAllocate(32);
-  newIndexer->allFuncCalls = PointerHeapArray__preAllocate(32);
-  newIndexer->allComptimeCalls = PointerHeapArray__preAllocate(32);
-  newIndexer->allVarRefs = PointerHeapArray__preAllocate(32);
+  newIndexer->allVarDef = HeapArray<VarDef>::preAllocated(32);
+  newIndexer->allFuncCalls = HeapArray<IdentifiedRef>::preAllocated(32);
+  newIndexer->allComptimeCalls = HeapArray<ComptimeCallRef>::preAllocated(32);
+  newIndexer->allVarRefs = HeapArray<IdentifiedRef>::preAllocated(32);
   newIndexer->allRootDefs = HashSet__preAllocate(32);
   newIndexer->allDefs = HashSet__preAllocate(32);
   newIndexer->allRefs = HashSet__preAllocate(32);
@@ -100,10 +101,6 @@ SourceIndexer *SourceIndexer__create(NodePos inStartPos, NodePos inEndPos)
       !newIndexer->importedFiles.rawFilepathsSet ||
       !newIndexer->allScopes ||
       !newIndexer->rootScope ||
-      !newIndexer->allVarDef ||
-      !newIndexer->allFuncCalls ||
-      !newIndexer->allComptimeCalls ||
-      !newIndexer->allVarRefs ||
       !newIndexer->allRootDefs ||
       !newIndexer->allDefs ||
       !newIndexer->allRefs ||
@@ -158,47 +155,26 @@ void SourceIndexer__free(SourceIndexer **self)
     {
       SourceScope *currScope = (*self)->allScopes->data[ii];
 
-      for (unsigned int ii = 0; ii < currScope->allVarDef->len; ++ii)
+      for (unsigned int ii = 0; ii < currScope->allComptimeCalls.len; ++ii)
       {
-        VarDef *currVar = currScope->allVarDef->data[ii];
-        VarDef__free(&currVar);
+        ComptimeCallRef *currVar = &currScope->allComptimeCalls.data[ii];
+        ComptimeCallRef__free(currVar);
       }
-      for (unsigned int ii = 0; ii < currScope->allFuncCalls->len; ++ii)
+      for (unsigned int ii = 0; ii < currScope->allVarRefs.len; ++ii)
       {
-        IdentifiedRef *currVar = currScope->allFuncCalls->data[ii];
-        IdentifiedRef__free(&currVar);
-      }
-      for (unsigned int ii = 0; ii < currScope->allComptimeCalls->len; ++ii)
-      {
-        ComptimeCallRef *currVar = currScope->allComptimeCalls->data[ii];
-        ComptimeCallRef__free(&currVar);
-      }
-      for (unsigned int ii = 0; ii < currScope->allVarRefs->len; ++ii)
-      {
-        IdentifiedRef *currVar = currScope->allVarRefs->data[ii];
-        IdentifiedRef__free(&currVar);
+        IdentifiedRef *currVar = &currScope->allVarRefs.data[ii];
+        IdentifiedRef__free(currVar);
       }
 
       SourceScope__free(&currScope);
     }
     PointerHeapArray__free(&(*self)->allScopes);
   }
-  if ((*self)->allVarDef)
-  {
-    PointerHeapArray__free(&(*self)->allVarDef);
-  }
-  if ((*self)->allFuncCalls)
-  {
-    PointerHeapArray__free(&(*self)->allFuncCalls);
-  }
-  if ((*self)->allComptimeCalls)
-  {
-    PointerHeapArray__free(&(*self)->allComptimeCalls);
-  }
-  if ((*self)->allVarRefs)
-  {
-    PointerHeapArray__free(&(*self)->allVarRefs);
-  }
+
+  HeapArray<VarDef>::free(&(*self)->allVarDef);
+  HeapArray<IdentifiedRef>::free(&(*self)->allFuncCalls);
+  HeapArray<ComptimeCallRef>::free(&(*self)->allComptimeCalls);
+  HeapArray<IdentifiedRef>::free(&(*self)->allVarRefs);
 
   if ((*self)->allRootDefs)
   {
@@ -310,6 +286,40 @@ int SourceIndexer__addBlockScope(SourceIndexer *self, NodePos inStartPos, NodePo
   return 0;
 }
 
+
+
+
+
+// MARK: findScope
+static SourceScope *_SourceIndexer__findScope(const SourceIndexer *self, const NodePos *inPos, SourceScope *inCurrScope)
+{
+  if (inPos->index < inCurrScope->startPos.index ||
+      inPos->index > inCurrScope->endPos.index)
+  {
+    // not contained
+    return NULL;
+  }
+
+  SourceScope *finalResult = inCurrScope;
+
+  for (unsigned int ii = 0; ii < inCurrScope->allChildrenScopes->len; ++ii)
+  {
+
+    SourceScope *childScope = inCurrScope->allChildrenScopes->data[ii];
+    SourceScope *tmpResult = _SourceIndexer__findScope(self, inPos, childScope);
+    if (tmpResult)
+    {
+      finalResult = tmpResult;
+      break;
+    }
+  }
+
+  return finalResult;
+}
+
+
+
+
 // MARK: computeScopesHierarchy
 void SourceIndexer__computeScopesHierarchy(SourceIndexer *self)
 {
@@ -347,69 +357,71 @@ void SourceIndexer__computeScopesHierarchy(SourceIndexer *self)
     SourceScope *currScope = self->allScopes->data[ii];
     if (currScope->parentScope)
     {
-      // push scope to parent
+      // push this scope as a "child scope" to their newly found "parent scope"
       PointerHeapArray__pushBack(currScope->parentScope->allChildrenScopes, currScope);
     }
   }
-}
 
-// MARK: findScope
-static SourceScope *_SourceIndexer__findScope(const SourceIndexer *self, const NodePos *inPos, SourceScope *inCurrScope)
-{
-  if (inPos->index < inCurrScope->startPos.index ||
-      inPos->index > inCurrScope->endPos.index)
   {
-    // not contained
-    return NULL;
-  }
+    // // PointerHeapArray<VarDef>
+    // PointerHeapArray *allVarDef;
+    // // PointerHeapArray<IdentifiedRef>
+    // PointerHeapArray *allFuncCalls;
+    // // PointerHeapArray<ComptimeCallRef>
+    // PointerHeapArray *allComptimeCalls;
 
-  SourceScope *finalResult = inCurrScope;
-
-  for (unsigned int ii = 0; ii < inCurrScope->allChildrenScopes->len; ++ii)
-  {
-
-    SourceScope *childScope = inCurrScope->allChildrenScopes->data[ii];
-    SourceScope *tmpResult = _SourceIndexer__findScope(self, inPos, childScope);
-    if (tmpResult)
+    for (unsigned int ii = 0; ii < self->allVarDef.len; ++ii)
     {
-      finalResult = tmpResult;
-      break;
-    }
-  }
+      VarDef* currVarDef = &self->allVarDef.data[ii];
+      currVarDef->parentScope = _SourceIndexer__findScope(self, &currVarDef->startPos, self->rootScope);
 
-  return finalResult;
+      // printf(" -{VARDEF[%d]}-> %s (%s)\n", ii, currVarDef->varName, currVarDef->typeName);
+
+      // PointerHeapArray__pushBack(currVarDef->parentScope->allVarDef, currVarDef);
+      // currVarDef->parentScope->allVarDef->pushBack(*currVarDef);
+      HeapArray<VarDef>::pushBackRef(&currVarDef->parentScope->allVarDef, currVarDef);
+    }
+
+    for (unsigned int ii = 0; ii < self->allFuncCalls.len; ++ii)
+    {
+      IdentifiedRef* currFuncCall = &self->allFuncCalls.data[ii];
+      currFuncCall->parentScope = _SourceIndexer__findScope(self, &currFuncCall->startPos, self->rootScope);
+      if (!currFuncCall->parentScope) {
+        panic("count not find a parent scope for a function");
+      }
+      HeapArray<IdentifiedRef>::pushBackRef(&currFuncCall->parentScope->allFuncCalls, currFuncCall);
+    }
+
+    for (unsigned int ii = 0; ii < self->allComptimeCalls.len; ++ii)
+    {
+      ComptimeCallRef* currComptimeCall = &self->allComptimeCalls.data[ii];
+      currComptimeCall->parentScope = _SourceIndexer__findScope(self, &currComptimeCall->startPos, self->rootScope);
+      HeapArray<ComptimeCallRef>::pushBackRef(&currComptimeCall->parentScope->allComptimeCalls, currComptimeCall);
+    }
+
+    for (unsigned int ii = 0; ii < self->allVarRefs.len; ++ii)
+    {
+      IdentifiedRef* currVarRef = &self->allVarRefs.data[ii];
+      currVarRef->parentScope = _SourceIndexer__findScope(self, &currVarRef->startPos, self->rootScope);
+      HeapArray<IdentifiedRef>::pushBackRef(&currVarRef->parentScope->allVarRefs, currVarRef);
+    }
+
+  }
 }
+
+
+
+
 
 // MARK: addVarDecl
 int SourceIndexer__addVarDecl(SourceIndexer *self, const char *inVarName, const char *inVarType, int inPtrLvl, NodePos inStartPos, NodePos inEndPos)
 {
-  VarDef *newVarDef = VarDef__create(inStartPos, inEndPos, inVarName, inVarType, inPtrLvl);
-  if (!newVarDef ||
-      PointerHeapArray__pushBack(self->allVarDef, newVarDef) != 0)
-  {
-    VarDef__free(&newVarDef);
-    return -1;
-  }
+  VarDef newVarDef = VarDef__create(inStartPos, inEndPos, inVarName, inVarType, inPtrLvl);
+  HeapArray<VarDef>::pushBackRef(&self->allVarDef, &newVarDef);
+
   if (HashSet__set(self->allDefs, inVarName) != 0)
   {
-    PointerHeapArray__popBack(self->allVarDef);
-    VarDef__free(&newVarDef);
-    return -1;
-  }
-  newVarDef->parentScope = _SourceIndexer__findScope(self, &inStartPos, self->rootScope);
-  if (newVarDef->parentScope &&
-      newVarDef->parentScope->scopeType == ROOT_SCOPE &&
-      HashSet__set(self->allRootDefs, inVarName) != 0)
-  {
-    PointerHeapArray__popBack(self->allVarDef);
-    VarDef__free(&newVarDef);
-    return -1;
-  }
-  if (!newVarDef->parentScope ||
-      PointerHeapArray__pushBack(newVarDef->parentScope->allVarDef, newVarDef) != 0)
-  {
-    PointerHeapArray__popBack(self->allVarDef);
-    HashSet__remove(self->allRootDefs, inVarName);
+    HeapArray<VarDef>::popBack(&self->allVarDef);
     VarDef__free(&newVarDef);
     return -1;
   }
@@ -419,21 +431,13 @@ int SourceIndexer__addVarDecl(SourceIndexer *self, const char *inVarName, const 
 // MARK: addFunCallRef
 int SourceIndexer__addFunCallRef(SourceIndexer *self, const char *inFuncCallName, NodePos inStartPos, NodePos inEndPos)
 {
-  IdentifiedRef *newFuncCallRef = IdentifiedRef__create(inStartPos, inEndPos, inFuncCallName);
-  if (!newFuncCallRef ||
-      PointerHeapArray__pushBack(self->allFuncCalls, newFuncCallRef) != 0 ||
-      HashSet__set(self->allDefs, inFuncCallName) != 0)
+  IdentifiedRef newFuncCallRef = IdentifiedRef::create(inStartPos, inEndPos, inFuncCallName);
+  HeapArray<IdentifiedRef>::pushBackRef(&self->allFuncCalls, &newFuncCallRef);
+
+  if (HashSet__set(self->allDefs, inFuncCallName) != 0)
   {
-    IdentifiedRef__free(&newFuncCallRef);
-    return -1;
-  }
-  newFuncCallRef->parentScope = _SourceIndexer__findScope(self, &inStartPos, self->rootScope);
-  if (!newFuncCallRef->parentScope ||
-      PointerHeapArray__pushBack(newFuncCallRef->parentScope->allFuncCalls, newFuncCallRef) != 0)
-  {
-    PointerHeapArray__popBack(self->allFuncCalls);
-    HashSet__remove(self->allDefs, inFuncCallName);
-    IdentifiedRef__free(&newFuncCallRef);
+    HeapArray<IdentifiedRef>::popBack(&self->allFuncCalls);
+    IdentifiedRef::free(&newFuncCallRef);
     return -1;
   }
   return 0;
@@ -442,30 +446,24 @@ int SourceIndexer__addFunCallRef(SourceIndexer *self, const char *inFuncCallName
 // MARK: comptimeCall
 int SourceIndexer__addComptimeCall(SourceIndexer *self, const char *inComtimeCallName, const char *inComtimeArgs, NodePos inStartPos, NodePos inEndPos)
 {
-  ComptimeCallRef *newComptimeCallRef = ComptimeCallRef__create(inStartPos, inEndPos, inComtimeCallName, inComtimeArgs);
-  if (!newComptimeCallRef ||
-      PointerHeapArray__pushBack(self->allComptimeCalls, newComptimeCallRef) != 0 ||
-      HashSet__set(self->allDefs, inComtimeCallName) != 0
-    )
+  ComptimeCallRef newComptimeCallRef = ComptimeCallRef__create(inStartPos, inEndPos, inComtimeCallName, inComtimeArgs);
+  HeapArray<ComptimeCallRef>::pushBackRef(&self->allComptimeCalls, &newComptimeCallRef);
+  if (HashSet__set(self->allDefs, inComtimeCallName) != 0)
   {
-    ComptimeCallRef__free(&newComptimeCallRef);
-    return -1;
-  }
-  newComptimeCallRef->parentScope = _SourceIndexer__findScope(self, &inStartPos, self->rootScope);
-  if (!newComptimeCallRef->parentScope ||
-      PointerHeapArray__pushBack(newComptimeCallRef->parentScope->allComptimeCalls, newComptimeCallRef) != 0)
-  {
-    PointerHeapArray__popBack(self->allComptimeCalls);
+    HeapArray<ComptimeCallRef>::popBack(&self->allComptimeCalls);
     ComptimeCallRef__free(&newComptimeCallRef);
     return -1;
   }
   return 0;
 }
 
-const PointerHeapArray* SourceIndexer__getComptimeCallsList(const SourceIndexer *self)
+const HeapArray<ComptimeCallRef>* SourceIndexer__getComptimeCallsList(const SourceIndexer *self)
 {
-  return self->allComptimeCalls;
+  return &self->allComptimeCalls;
 }
+
+
+
 
 // MARK: addVarRef
 int SourceIndexer__addVarRef(SourceIndexer *self, const char *inVarRefName, NodePos inStartPos, NodePos inEndPos)
@@ -475,23 +473,20 @@ int SourceIndexer__addVarRef(SourceIndexer *self, const char *inVarRefName, Node
     return -1;
   }
 
-  IdentifiedRef *newVarRef = IdentifiedRef__create(inStartPos, inEndPos, inVarRefName);
-  if (!newVarRef ||
-      PointerHeapArray__pushBack(self->allVarRefs, newVarRef) != 0 ||
-      HashSet__set(self->allRefs, inVarRefName) != 0)
-  {
-    IdentifiedRef__free(&newVarRef);
-    return -1;
-  }
-  newVarRef->parentScope = _SourceIndexer__findScope(self, &inStartPos, self->rootScope);
-  if (!newVarRef->parentScope ||
-      PointerHeapArray__pushBack(newVarRef->parentScope->allVarRefs, newVarRef) != 0)
+  IdentifiedRef newVarRef = IdentifiedRef__create(inStartPos, inEndPos, inVarRefName);
+  HeapArray<IdentifiedRef>::pushBackRef(&self->allVarRefs, &newVarRef);
+
+  if (HashSet__set(self->allRefs, inVarRefName) != 0)
   {
     IdentifiedRef__free(&newVarRef);
     return -1;
   }
   return 0;
 }
+
+
+
+
 
 //MARK: exportedDef
 int SourceIndexer__addExportedDef(SourceIndexer *self, const char *inVarRefName)
@@ -512,6 +507,11 @@ const HashSet* SourceIndexer__getExportedDef(const SourceIndexer *self)
   return self->allExportedDefsSet;
 }
 
+
+
+
+
+
 //MARK: ComptimeTypeToResolve
 int SourceIndexer__addComptimeTypeToResolve(SourceIndexer *self, const char *inType)
 {
@@ -522,6 +522,12 @@ const HashSet* SourceIndexer__getComptimeTypesToResolve(const SourceIndexer *sel
 {
   return self->comptimeFeatures.typesToResolve;
 }
+
+
+
+
+
+
 
 //MARK: ComptimeTextToReplace
 int SourceIndexer__addComptimeTextToReplace(SourceIndexer *self, const char *inSrc, const char *inDst)
@@ -560,9 +566,9 @@ const VarDef* SourceIndexer__findTypename(const SourceIndexer *self, const char 
 
   for (const SourceScope* cursor = parentScope; cursor; cursor = cursor->parentScope)
   {
-    for (unsigned int ii = 0; ii < cursor->allVarDef->len; ++ii)
+    for (unsigned int ii = 0; ii < cursor->allVarDef.len; ++ii)
     {
-      VarDef* currVarDef = cursor->allVarDef->data[ii];
+      VarDef* currVarDef = &cursor->allVarDef.data[ii];
       if (strcmp(currVarDef->varName, inVarRefName) == 0)
       {
         return currVarDef;
@@ -629,9 +635,9 @@ static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, Strea
   snprintf(buffer, 1024, "\n");
   StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
-  for (unsigned int ii = 0; ii < currScope->allVarDef->len; ++ii)
+  for (unsigned int ii = 0; ii < currScope->allVarDef.len; ++ii)
   {
-    VarDef *currVar = currScope->allVarDef->data[ii];
+    VarDef *currVar = &currScope->allVarDef.data[ii];
 
     _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "=-=-");
     // snprintf(buffer, 1024, "=-=-");
@@ -653,9 +659,9 @@ static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, Strea
     StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
   }
 
-  for (unsigned int ii = 0; ii < currScope->allFuncCalls->len; ++ii)
+  for (unsigned int ii = 0; ii < currScope->allFuncCalls.len; ++ii)
   {
-    IdentifiedRef *currId = currScope->allFuncCalls->data[ii];
+    IdentifiedRef *currId = &currScope->allFuncCalls.data[ii];
 
     _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "=-=-");
     // snprintf(buffer, 1024, "=-=-");
@@ -676,9 +682,9 @@ static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, Strea
     StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
   }
 
-  for (unsigned int ii = 0; ii < currScope->allComptimeCalls->len; ++ii)
+  for (unsigned int ii = 0; ii < currScope->allComptimeCalls.len; ++ii)
   {
-    ComptimeCallRef *currCall = currScope->allComptimeCalls->data[ii];
+    ComptimeCallRef *currCall = &currScope->allComptimeCalls.data[ii];
 
     _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "=-=-");
     // snprintf(buffer, 1024, "=-=-");
@@ -695,11 +701,11 @@ static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, Strea
     snprintf(buffer, 1024, " -> ComptimeCall: name=\"%s\", args=\"%s\"", currCall->varName, currCall->argsValue);
     StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
-    for (unsigned int ii = 0; ii < currCall->argsList->len; ++ii)
+    for (unsigned int ii = 0; ii < currCall->argsList.len; ++ii)
     {
-      const char* argStr = currCall->argsList->data[ii];
+      const StringData* argStr = &currCall->argsList.data[ii];
 
-      snprintf(buffer, 1024, " { args[%d]=\"%s\" }", ii, argStr);
+      snprintf(buffer, 1024, " { args[%d]=\"%s\" }", ii, argStr->data);
       StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
     }
 
@@ -707,9 +713,9 @@ static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, Strea
     StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
   }
 
-  for (unsigned int ii = 0; ii < currScope->allVarRefs->len; ++ii)
+  for (unsigned int ii = 0; ii < currScope->allVarRefs.len; ++ii)
   {
-    IdentifiedRef *currId = currScope->allVarRefs->data[ii];
+    IdentifiedRef *currId = &currScope->allVarRefs.data[ii];
 
     _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "=-=-");
     // snprintf(buffer, 1024, "=-=-");
@@ -825,4 +831,17 @@ void SourceIndexer__debugScopeTree(SourceIndexer *self, const char* inBaseDir, S
 
 
   _SourceIndexer__debugTraverseScopeTree(self->rootScope, inStreamWriter, 1);
+}
+
+int SourceIndexer__hasMainFunction(const SourceIndexer *self)
+{
+  for (unsigned int ii = 0; ii < self->rootScope->allChildrenScopes->len; ++ii)
+  {
+    const SourceScope *childScope = self->rootScope->allChildrenScopes->data[ii];
+    if (strcmp(childScope->funcName, "main") == 0)
+    {
+      return 1;
+    }
+  }
+  return 0;
 }

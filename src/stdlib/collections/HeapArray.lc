@@ -6,50 +6,51 @@
 #include <stdio.h>
 #include <string.h>
 
-export comptime void HeapArray(const char* inType) {
+export comptime void HeapArray(const char* inType)
+{
   const char* k_str = ```
 
 ///comptime-lazy-c: "text-replace" "HeapArray<{TYPE}>" "HeapArray__{TYPE}"
 ///comptime-lazy-c: "resolve-includes" "{TYPE}"
 
+#include "stdlib/core/panic.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
 
-export struct HeapArray__{TYPE} {
+export struct HeapArray__{TYPE}
+{
   {TYPE}* data;
   unsigned int len;
   unsigned int cap;
 };
 
-export HeapArray__{TYPE}* HeapArray__{TYPE}__preAllocated(unsigned int inCapacity) {
+export HeapArray__{TYPE} HeapArray__{TYPE}__preAllocated(unsigned int inCapacity)
+{
+  HeapArray__{TYPE} self;
+  memset(&self, 0, sizeof(HeapArray__{TYPE}));
 
-  HeapArray__{TYPE} *self = calloc(1, sizeof(HeapArray__{TYPE}));
-  if (!self)
+  self.len = 0;
+  self.cap = inCapacity < 32 ? 32 : inCapacity;
+  self.data = calloc(self.cap, sizeof({TYPE}));
+  if (!self.data)
   {
-    return NULL;
-  }
-
-  self->len = 0;
-  self->cap = inCapacity < 32 ? 32 : inCapacity;
-  self->data = calloc(self->cap, sizeof({TYPE}));
-  if (!self->data)
-  {
-    free(self);
-    return NULL;
+    // free(self);
+    panic("OOM?");
   }
 
   return self;
 }
 
-export void HeapArray__{TYPE}__free(HeapArray__{TYPE}** self) {
-  if (!self || !*self)
+export void HeapArray__{TYPE}__free(HeapArray__{TYPE}* self)
+{
+  if (!self || !self->data)
   {
     return;
   }
-  free((*self)->data);
-  free(*self);
-  *self = NULL;
+  free(self->data);
+  memset(self, 0, sizeof(HeapArray__{TYPE}));
 }
 
 static int _HeapArray__{TYPE}__grow(HeapArray__{TYPE} *self, unsigned int inNewCapacity)
@@ -62,11 +63,12 @@ static int _HeapArray__{TYPE}__grow(HeapArray__{TYPE} *self, unsigned int inNewC
   {
     self->cap *= 2;
   }
-  self->data = realloc(self->data, self->cap * sizeof(void *));
+
+  self->data = realloc(self->data, self->cap * sizeof({TYPE}));
   return self->data == NULL ? -1 : 0;
 }
 
-int HeapArray__{TYPE}__pushBack(HeapArray__{TYPE} *self, {TYPE} *inData)
+export int HeapArray__{TYPE}__pushBackRef(HeapArray__{TYPE} *self, {TYPE} *inData)
 {
   if (_HeapArray__{TYPE}__grow(self, self->len + 1) != 0)
   {
@@ -77,19 +79,19 @@ int HeapArray__{TYPE}__pushBack(HeapArray__{TYPE} *self, {TYPE} *inData)
   return 0;
 }
 
-int HeapArray__{TYPE}__popBack(HeapArray__{TYPE} *self)
+export int HeapArray__{TYPE}__popBack(HeapArray__{TYPE} *self)
 {
   if (self->len > 0)
   {
     --self->len;
-    memset(&self->data[self->len], 0, sizeof({TYPE}));
+    // memset(&self->data[self->len], 0, sizeof({TYPE}));
     // self->data[--self->len] = NULL;
     return 0;
   }
   return -1;
 }
 
-void HeapArray__{TYPE}__clear(HeapArray__{TYPE} *self)
+export void HeapArray__{TYPE}__clear(HeapArray__{TYPE} *self)
 {
   self->len = 0;
 }

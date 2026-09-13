@@ -34,7 +34,7 @@ static void BuildCmakeConfig_can_generate_a_cmake_file() {
   int result = BuildCmakeConfig__generateCmakeFile(&opts);
   assert(result == 0);
 
-  for (int ii = 0; ii < sourcesFilepaths->len; ++ii) {
+  for (unsigned int ii = 0; ii < sourcesFilepaths->len; ++ii) {
     char* tmpStr = sourcesFilepaths->data[ii];
     free(tmpStr);
   }
@@ -72,19 +72,19 @@ static void BuildCmakeConfig_can_generate_a_cmake_file_includepath_and_librarypa
   int result = BuildCmakeConfig__generateCmakeFile(&opts);
   assert(result == 0);
 
-  for (int ii = 0; ii < sourcesFilepaths->len; ++ii) {
+  for (unsigned int ii = 0; ii < sourcesFilepaths->len; ++ii) {
     char* tmpStr = sourcesFilepaths->data[ii];
     free(tmpStr);
   }
   PointerHeapArray__free(&sourcesFilepaths);
 
-  for (int ii = 0; ii < includeFilepaths->len; ++ii) {
+  for (unsigned int ii = 0; ii < includeFilepaths->len; ++ii) {
     char* tmpStr = includeFilepaths->data[ii];
     free(tmpStr);
   }
   PointerHeapArray__free(&includeFilepaths);
 
-  for (int ii = 0; ii < libraryFilepaths->len; ++ii) {
+  for (unsigned int ii = 0; ii < libraryFilepaths->len; ++ii) {
     char* tmpStr = libraryFilepaths->data[ii];
     free(tmpStr);
   }

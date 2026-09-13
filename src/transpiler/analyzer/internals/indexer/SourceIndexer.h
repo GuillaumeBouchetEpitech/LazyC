@@ -39,8 +39,7 @@ int SourceIndexer__addExportedDef(SourceIndexer *self, const char *inVarRefName)
 // HashSet<char*>
 const HashSet* SourceIndexer__getExportedDef(const SourceIndexer *self);
 
-// PointerHeapArray<ComptimeCallRef*>
-const PointerHeapArray* SourceIndexer__getComptimeCallsList(const SourceIndexer *self);
+const HeapArray<ComptimeCallRef>* SourceIndexer__getComptimeCallsList(const SourceIndexer *self);
 
 
 // ex: "Vec3", etc.
@@ -56,4 +55,7 @@ const VarDef* SourceIndexer__findTypename(const SourceIndexer *self, const char 
 
 
 void SourceIndexer__debugScopeTree(SourceIndexer *self, const char* inBaseDir, StreamWriter *streamWriter);
+
+
+int SourceIndexer__hasMainFunction(const SourceIndexer *self);
 

@@ -200,11 +200,23 @@ int BuildCmakeConfig__generateCmakeFile(const BuildCmakeConfigOpts *inOpts)
 
   }
 
+  if (inOpts->strictMode == 1)
   {
     const char* k_str = "\n"
       "\n"
-      "set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS \"-g3\") # debug\n"
-      "set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS \"-g3\") # debug\n"
+      "set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS \"-O3 -Wall -Wextra -Werror\") # debug\n"
+      "set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS \"-O3\") # debug\n"
+      "set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY \"${PROJECT_SOURCE_DIR}/bin\")\n"
+      "\n";
+
+    StreamWriter__write(streamWriter, k_str, strlen(k_str));
+  }
+  else
+  {
+    const char* k_str = "\n"
+      "\n"
+      "set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS \"-O3\") # debug\n"
+      "set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS \"-O3\") # debug\n"
       "set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY \"${PROJECT_SOURCE_DIR}/bin\")\n"
       "\n";
 
@@ -246,7 +258,7 @@ int BuildCmakeConfig__generateCmakeFile(const BuildCmakeConfigOpts *inOpts)
     // }
 
     {
-      char *const  argv[] = { "/usr/bin/cmake", "-B", "./build", NULL };
+      char *const argv[] = { "/usr/bin/cmake", "-B", "./build", NULL };
       const int result = executeCommand("/usr/bin/cmake", argv, inOpts->inOutputDir);
       if (result != 0) {
         panic("could not initialize a cmake project");
@@ -256,7 +268,7 @@ int BuildCmakeConfig__generateCmakeFile(const BuildCmakeConfigOpts *inOpts)
     }
 
     {
-      char *const  argv[] = { "/usr/bin/cmake", "--build", "./build", "--parallel", "5", NULL };
+      char *const argv[] = { "/usr/bin/cmake", "--build", "./build", "--parallel", "5", NULL };
       const int result = executeCommand("/usr/bin/cmake", argv, inOpts->inOutputDir);
       if (result != 0) {
         panic("could not build a cmake project");

@@ -6,31 +6,20 @@
 // #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <time.h>
-
-typedef struct StopWatch {
-
-  struct timespec start;
-  struct timespec stop;
-
-} StopWatch;
+#include <memory.h>
 
 #define BILLION  1000000000L;
 
-
-StopWatch* StopWatch__create()
+StopWatch StopWatch__create()
 {
-  StopWatch* self = calloc(1, sizeof(StopWatch));
+  StopWatch self;
+  memset(&self, 0, sizeof(StopWatch));
   return self;
 }
 
-void StopWatch__free(StopWatch** self)
+void StopWatch__free(StopWatch* self)
 {
-  if (!self || !*self) {
-    return;
-  }
-  free(*self);
-  *self = NULL;
+  memset(self, 0, sizeof(StopWatch));
 }
 
 void StopWatch__start(StopWatch* self)

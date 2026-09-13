@@ -12,6 +12,9 @@
 #include "stdlib/filesystem/pathUtils.h"
 #include "stdlib/strings/trimStr.h"
 
+#include "stdlib/time/StopWatch.h"
+
+
 // #include <dirent.h>
 #include <string.h>
 #include <stdlib.h>
@@ -21,7 +24,7 @@
 
 
 // forward declaration(s)
-int AnalyzedFile__queryAll(AnalyzedFile *self);
+int AnalyzedFile__queryAll(AnalyzedFile *self, TSQuery* query);
 // int AnalyzedFile__queryImports(AnalyzedFile *self);
 // int AnalyzedFile__queryScopes(AnalyzedFile *self);
 // int AnalyzedFile__queryStructDef(AnalyzedFile *self);
@@ -29,8 +32,8 @@ int AnalyzedFile__queryAll(AnalyzedFile *self);
 // int AnalyzedFile__queryVarDef(AnalyzedFile *self);
 // int AnalyzedFile__queryFuncCalls(AnalyzedFile *self);
 // int AnalyzedFile__queryComptimeCalls(AnalyzedFile *self);
-int AnalyzedFile__queryVarRef(AnalyzedFile *self);
-int AnalyzedFile__queryComptimeComments(AnalyzedFile *self);
+int AnalyzedFile__queryVarRef(AnalyzedFile *self, TSQuery* query);
+int AnalyzedFile__queryComptimeComments(AnalyzedFile *self, TSQuery* query);
 
 //MARK: AnalyzedFile_create
 AnalyzedFile *AnalyzedFile__create(SourceParser *inParser, const char *inFilepath)
@@ -71,6 +74,16 @@ AnalyzedFile *AnalyzedFile__create(SourceParser *inParser, const char *inFilepat
     return NULL;
   }
 
+
+
+  // printf(" ---> sub-analyze\n");
+  // StopWatch stopWatch = StopWatch__create();
+  // StopWatch__start(&stopWatch);
+
+  TSQuery* queryA = SourceParser__getQueryA(inParser);
+  TSQuery* queryB = SourceParser__getQueryB(inParser);
+  TSQuery* queryC = SourceParser__getQueryC(inParser);
+
   if (
       // AnalyzedFile__queryImports(analyzedFile) != 0 ||
       // AnalyzedFile__queryScopes(analyzedFile) != 0 ||
@@ -80,13 +93,18 @@ AnalyzedFile *AnalyzedFile__create(SourceParser *inParser, const char *inFilepat
       // AnalyzedFile__queryVarDef(analyzedFile) != 0 ||
       // AnalyzedFile__queryFuncCalls(analyzedFile) != 0 ||
 
-      AnalyzedFile__queryAll(analyzedFile) != 0 ||
+      AnalyzedFile__queryAll(analyzedFile, queryA) != 0 ||
 
-      AnalyzedFile__queryVarRef(analyzedFile) != 0 ||
-      AnalyzedFile__queryComptimeComments(analyzedFile) != 0) {
+      AnalyzedFile__queryVarRef(analyzedFile, queryB) != 0 ||
+      AnalyzedFile__queryComptimeComments(analyzedFile, queryC) != 0) {
     AnalyzedFile__free(&analyzedFile);
     return NULL;
   }
+
+  // StopWatch__stop(&stopWatch);
+  // const double timeInSec = StopWatch__getTime(&stopWatch);
+  // printf("   -> %lf sec\n", timeInSec);
+  // StopWatch__free(&stopWatch);
 
   SourceIndexer__computeScopesHierarchy(analyzedFile->indexer);
 
@@ -117,90 +135,102 @@ void AnalyzedFile__free(AnalyzedFile **self)
 }
 
 //MARK: queryAll
-int AnalyzedFile__queryAll(AnalyzedFile *self)
+int AnalyzedFile__queryAll(AnalyzedFile *self, TSQuery* query)
 {
-  const char* k_queryStr = "\n"
-    "\n"
-    "\n"
-    "; includes\n"
-    "\n"
-    "(preproc_include path: (_) @import.source) @import\n"
-    "\n"
-    "\n"
-    "; block scopes\n"
-    "\n"
-    "(compound_statement) @block.scope\n"
-    "\n"
-    "; functions definitions (1)\n"
-    "\n"
-    "(function_definition (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
-    "  declarator: [\n"
-    "    (\n"
-    "      function_declarator declarator: (identifier) @name)\n"
-    "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
-    "      function_declarator declarator: (identifier) @name))\n"
-    "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
-    "      function_declarator declarator: (identifier) @name)))\n"
-    "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
-    "      function_declarator declarator: (identifier) @name))))\n"
-    "  ]\n"
-    "  (_) @body) @definition.function\n"
-    "\n"
-    "\n"
-    "; Structs, Unions, Enums, Typedefs\n"
-    "\n"
-    "(struct_specifier (\"export\")? @exported name: (type_identifier) @name templated_type: (type_identifier)? @templated.type (field_declaration_list) @field_declaration_list ) @definition.struct\n"
-    "(enum_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.enum\n"
-    "(union_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.union\n"
-    "(type_definition (\"export\")? @exported declarator: (type_identifier) @name) @definition.typedef\n"
-    "\n"
-    "\n"
-    "; var declaration\n"
-    "\n"
-    "(declaration (_) @type (identifier) @name (_)? @body) @declaration.variable\n"
-    "(declaration (_) @type (init_declarator (identifier) @name (_)? @body)) @declaration.variable\n"
-    "(declaration (_) @type (init_declarator (pointer_declarator)+ @name)) @declaration.variable\n"
-    "\n"
-    "; functions params\n"
-    "\n"
-    "(parameter_declaration (_) @type (identifier) @name (_)? @body) @declaration.variable\n"
-    "(parameter_declaration (_) @type (pointer_declarator)+ @name) @declaration.variable\n"
-    "\n"
-    "\n"
-    "; function calls\n"
-    "\n"
-    "(call_expression function: ((identifier) @call.name (_) @call.args)) @call\n"
-    "(call_expression function: (field_expression field: (field_identifier) @call.name) ((_) @call.args) ) @call\n"
-    "\n"
-    "\n"
-    "; comptime calls\n"
-    "\n"
-    "(comptime_call_expression function: ((identifier) @call.name arguments: (_) @call.args)) @comptime.call\n"
-    "\n"
-    "\n"
-    "; functions signatures\n"
-    "\n"
-    // "(declaration (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
-    "(declaration type: (_) @return.type\n"
-    "  declarator: [\n"
-    "    (\n"
-    "      function_declarator declarator: (identifier) @name)\n"
-    "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
-    "      function_declarator declarator: (identifier) @name))\n"
-    "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
-    "      function_declarator declarator: (identifier) @name)))\n"
-    "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
-    "      function_declarator declarator: (identifier) @name))))\n"
-    "  ]\n"
-    "  ) @definition.function\n"
-    "\n"
-    "\n"
-    "\n";
+  // const char* k_queryStr = "\n"
+  //   "\n"
+  //   "\n"
+  //   "; includes\n"
+  //   "\n"
+  //   "(preproc_include path: (_) @import.source) @import\n"
+  //   "\n"
+  //   "\n"
+  //   "; block scopes\n"
+  //   "\n"
+  //   "(compound_statement) @block.scope\n"
+  //   "\n"
+  //   "; functions definitions (1)\n"
+  //   "\n"
+  //   "(function_definition (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
+  //   "  declarator: [\n"
+  //   "    (\n"
+  //   "      function_declarator declarator: (identifier) @name)\n"
+  //   "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
+  //   "      function_declarator declarator: (identifier) @name))\n"
+  //   "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
+  //   "      function_declarator declarator: (identifier) @name)))\n"
+  //   "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
+  //   "      function_declarator declarator: (identifier) @name))))\n"
+  //   "  ]\n"
+  //   "  (_) @body) @definition.function\n"
+  //   "\n"
+  //   "\n"
+  //   "; Structs, Unions, Enums, Typedefs\n"
+  //   "\n"
+  //   "(struct_specifier (\"export\")? @exported name: (type_identifier) @name templated_type: (type_identifier)? @templated.type (field_declaration_list) @field_declaration_list ) @definition.struct\n"
+  //   "(enum_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.enum\n"
+  //   "(union_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.union\n"
+  //   "(type_definition (\"export\")? @exported declarator: (type_identifier) @name) @definition.typedef\n"
+  //   "\n"
+  //   "\n"
+  //   "; var declaration\n"
+  //   "\n"
+  //   "(declaration (_) @type (identifier) @name (_)? @body) @declaration.variable\n"
+  //   "(declaration (_) @type (init_declarator (identifier) @name (_)? @body)) @declaration.variable\n"
+  //   "(declaration (_) @type (init_declarator (pointer_declarator)+ @name)) @declaration.variable\n"
+  //   "\n"
+  //   "; functions params\n"
+  //   "\n"
+  //   "(parameter_declaration (_) @type (identifier) @name (_)? @body) @declaration.variable\n"
+  //   "(parameter_declaration (_) @type (pointer_declarator)+ @name) @declaration.variable\n"
+  //   "\n"
+  //   "\n"
+  //   "; function calls\n"
+  //   "\n"
+  //   "(call_expression function: ((identifier) @call.name (_) @call.args)) @call\n"
+  //   "(call_expression function: (field_expression field: (field_identifier) @call.name) ((_) @call.args) ) @call\n"
+  //   "\n"
+  //   "\n"
+  //   "; comptime calls\n"
+  //   "\n"
+  //   "(comptime_call_expression function: ((identifier) @call.name arguments: (_) @call.args)) @comptime.call\n"
+  //   "\n"
+  //   "\n"
+  //   "; functions signatures\n"
+  //   "\n"
+  //   // "(declaration (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
+  //   "(declaration type: (_) @return.type\n"
+  //   "  declarator: [\n"
+  //   "    (\n"
+  //   "      function_declarator declarator: (identifier) @name)\n"
+  //   "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
+  //   "      function_declarator declarator: (identifier) @name))\n"
+  //   "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
+  //   "      function_declarator declarator: (identifier) @name)))\n"
+  //   "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
+  //   "      function_declarator declarator: (identifier) @name))))\n"
+  //   "  ]\n"
+  //   "  ) @definition.function\n"
+  //   "\n"
+  //   "\n"
+  //   "\n";
 
   // printf("k_queryStr: %s\n", k_queryStr);
 
   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
+
+
+  // printf(" ---> sub-analyze\n");
+  // StopWatch stopWatch = StopWatch__create();
+  // StopWatch__start(&stopWatch);
+
+  // QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
+  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, query);
+
+  // StopWatch__stop(&stopWatch);
+  // const double timeInSec = StopWatch__getTime(&stopWatch);
+  // printf("   -> %lf sec\n", timeInSec);
+  // StopWatch__free(&stopWatch);
 
   char* currDir = Path__dirname(self->filepath);
 
@@ -882,28 +912,29 @@ int AnalyzedFile__queryAll(AnalyzedFile *self)
 // }
 
 //MARK: queryVarRef
-int AnalyzedFile__queryVarRef(AnalyzedFile *self)
+int AnalyzedFile__queryVarRef(AnalyzedFile *self, TSQuery* query)
 {
   // if (self->fileType == SOURCE_H) {
   //   return 0;
   // }
-  const char* k_queryStr = "\n"
-    "\n"
-    "; any identifier\n"
-    "\n"
-    "(identifier) @any.identifier\n"
-    "\n";
+  // const char* k_queryStr = "\n"
+  //   "\n"
+  //   "; any identifier\n"
+  //   "\n"
+  //   "(identifier) @any.identifier\n"
+  //   "\n";
 
   // printf("k_queryStr: %s\n", k_queryStr);
 
   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
+  // QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
+  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, query);
+
 
   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
   {
-    if (
-      HashMap__contains(cursor->captureMap, "any.identifier")
-    ) {
+    // if (HashMap__contains(cursor->captureMap, "any.identifier"))
+    {
       NodeData* mainNode = HashMap__get(cursor->captureMap, "any.identifier");
 
       const char* nameStr = parsedFileContent + mainNode->startPos.index;
@@ -923,7 +954,7 @@ int AnalyzedFile__queryVarRef(AnalyzedFile *self)
 }
 
 //MARK: queryComptimeComments
-int AnalyzedFile__queryComptimeComments(AnalyzedFile *self)
+int AnalyzedFile__queryComptimeComments(AnalyzedFile *self, TSQuery* query)
 {
   if (self->fileType != SOURCE_LC) {
     // printf(" IS NOT A LC FILE -> {COMPTIME-COMMENt}\n");
@@ -932,15 +963,15 @@ int AnalyzedFile__queryComptimeComments(AnalyzedFile *self)
 
   // printf(" IS A LC FILE -> {COMPTIME-COMMENt}\n");
 
-  const char* k_queryStr = "\n"
-    "\n"
-    // "; example -> ///comptime-lazy-c: \"text-replace\" \"HeapArena<int>\" \"HeapArena__int\"\n"
-    // "\n"
-    // "((comment) @comment.comptime (#match? @comment.comptime \"^///\\s*?comptime-lazy-c\\s*?\\:\\s*?.*$\"))\n"
-    // "(comment) @comment.comptime\n"
-    // "(comptime_comment) @comment.comptime\n"
-    "(comment) @comment\n"
-    "\n";
+  // const char* k_queryStr = "\n"
+  //   "\n"
+  //   // "; example -> ///comptime-lazy-c: \"text-replace\" \"HeapArena<int>\" \"HeapArena__int\"\n"
+  //   // "\n"
+  //   // "((comment) @comment.comptime (#match? @comment.comptime \"^///\\s*?comptime-lazy-c\\s*?\\:\\s*?.*$\"))\n"
+  //   // "(comment) @comment.comptime\n"
+  //   // "(comptime_comment) @comment.comptime\n"
+  //   "(comment) @comment\n"
+  //   "\n";
 
   const char* k_patternStr = "///comptime-lazy-c:";
   const unsigned int k_patternLen = strlen(k_patternStr);
@@ -948,7 +979,8 @@ int AnalyzedFile__queryComptimeComments(AnalyzedFile *self)
   // printf("k_queryStr: %s\n", k_queryStr);
 
   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
+  // QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
+  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, query);
 
   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
   {

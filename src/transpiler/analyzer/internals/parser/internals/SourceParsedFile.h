@@ -7,6 +7,7 @@
 
 // forward declaration
 typedef struct TSTree TSTree;
+typedef struct TSQuery TSQuery;
 
 typedef struct NodePos {
   unsigned int row;
@@ -44,6 +45,8 @@ void SourceParsedFile__debugTree(const SourceParsedFile* inParsedFile, StreamWri
 NodePos SourceParsedFile__getStartPos(SourceParsedFile *self);
 NodePos SourceParsedFile__getEndPos(SourceParsedFile *self);
 
-QueryMatchData* SourceParsedFile__query(const SourceParsedFile* inParsedFile, const char* inQueryData, unsigned int inQueryLength);
+// QueryMatchData* SourceParsedFile__query(const SourceParsedFile* inParsedFile, const char* inQueryData, unsigned int inQueryLength);
+QueryMatchData *SourceParsedFile__query(const SourceParsedFile *inParsedFile, TSQuery *inQuery);
 void QueryMatchData__free(QueryMatchData** self);
+
 

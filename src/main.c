@@ -25,8 +25,14 @@ int main(int argc, char **argv)
   printf(" -> cmdOpts->outputDir:    %s\n", cmdOpts->outputDir);
   printf(" -> cmdOpts->baseDir:      %s\n", cmdOpts->baseDir);
   printf(" -> cmdOpts->entryFilepath:%s\n", cmdOpts->entryFilepath);
+  printf(" -> cmdOpts->handleTests:  %d\n", cmdOpts->handleTests);
 
-  Transpiler* transpiler = Transpiler__create(cmdOpts->baseDir, cmdOpts->entryFilepath, cmdOpts->outputDir, cmdOpts->includePath);
+  Transpiler* transpiler = Transpiler__create(
+    cmdOpts->baseDir,
+    cmdOpts->entryFilepath,
+    cmdOpts->outputDir,
+    cmdOpts->includePath,
+    cmdOpts->handleTests);
   if (!transpiler) {
     panic("could not create the transpiler");
   }
@@ -45,6 +51,8 @@ int main(int argc, char **argv)
   buildOpts.inIncludePath = cmdOpts->includePath;
   buildOpts.inLibraryPath = cmdOpts->libraryPath;
   buildOpts.doBuild = 1;
+  // disable the strict mode when building the unit-tests
+  buildOpts.strictMode = cmdOpts->handleTests != 0 ? 0 : 1;
 
   if (BuildCmakeConfig__generateCmakeFile(&buildOpts) != 0) {
     panic("could generate a CMakeFile");

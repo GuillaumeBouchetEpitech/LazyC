@@ -5,6 +5,7 @@ cmake-build.*
 
 bin
 output
+output-second
 .generated
 *.debug
 *.actual-matches
@@ -16,4 +17,6 @@ output
 last-known-good
 
 TODO.md
+
+_tmp
 

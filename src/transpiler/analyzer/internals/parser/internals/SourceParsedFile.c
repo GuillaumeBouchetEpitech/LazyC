@@ -4,6 +4,8 @@
 #include "stdlib/core/panic.h"
 #include "stdlib/filesystem/readFile.h"
 
+#include "stdlib/time/StopWatch.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -103,22 +105,34 @@ NodePos SourceParsedFile__getEndPos(SourceParsedFile *self)
 
 static QueryMatchData *_QueryMatchData_create(TSQuery *inQuery, TSQueryMatch *inMatch);
 
-QueryMatchData *SourceParsedFile__query(const SourceParsedFile *inParsedFile, const char *inQueryData, unsigned int inQueryLength)
+// QueryMatchData *SourceParsedFile__query(const SourceParsedFile *inParsedFile, const char *inQueryData, unsigned int inQueryLength)
+QueryMatchData *SourceParsedFile__query(const SourceParsedFile *inParsedFile, TSQuery *inQuery)
 {
 
-  uint32_t err_offset;
-  TSQueryError err_type;
-  TSQuery *query = ts_query_new(tree_sitter_lazyc(), inQueryData, (uint32_t)inQueryLength, &err_offset, &err_type);
-  if (!query)
-  {
-    fprintf(stderr, "bad query (type %d) at byte %u\n", err_type, err_offset);
-    panic("bad tree-sitter query");
-    // return NULL;
-  }
+
+  // printf("   ---> query\n");
+  // StopWatch stopWatch = StopWatch__create();
+  // StopWatch__start(&stopWatch);
+
+  // uint32_t err_offset;
+  // TSQueryError err_type;
+  // TSQuery *query = ts_query_new(tree_sitter_lazyc(), inQueryData, (uint32_t)inQueryLength, &err_offset, &err_type);
+  // if (!query)
+  // {
+  //   fprintf(stderr, "bad query (type %d) at byte %u\n", err_type, err_offset);
+  //   panic("bad tree-sitter query");
+  //   // return NULL;
+  // }
+
+  // StopWatch__stop(&stopWatch);
+  // const double timeInSec = StopWatch__getTime(&stopWatch);
+  // printf("     ---> %lf sec\n", timeInSec);
+  // StopWatch__free(&stopWatch);
+
 
   TSQueryCursor *cursor = ts_query_cursor_new();
   TSNode rootNode = ts_tree_root_node(inParsedFile->pTree);
-  ts_query_cursor_exec(cursor, query, rootNode);
+  ts_query_cursor_exec(cursor, inQuery, rootNode);
 
   QueryMatchData *rootMatch = NULL;
   QueryMatchData *lastMatch = NULL;
@@ -130,7 +144,7 @@ QueryMatchData *SourceParsedFile__query(const SourceParsedFile *inParsedFile, co
     // int nameLen;
     // printf("---> %s\n", ts_query_capture_name_for_id(query, match.id, &nameLen));
 
-    QueryMatchData *newMatchData = _QueryMatchData_create(query, &match);
+    QueryMatchData *newMatchData = _QueryMatchData_create(inQuery, &match);
 
     if (!rootMatch)
     {
@@ -144,7 +158,7 @@ QueryMatchData *SourceParsedFile__query(const SourceParsedFile *inParsedFile, co
   }
 
   ts_query_cursor_delete(cursor);
-  ts_query_delete(query);
+  // ts_query_delete(inQuery);
 
   return rootMatch;
 }

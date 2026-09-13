@@ -1,0 +1,66 @@
+
+#include "../HeapArray.lc"
+
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+
+//
+//
+//
+
+//
+//
+//
+
+static void HeapArray_can_create_pre_allocated_HeapArray() {
+  HeapArray<int> testHeapArray = HeapArray<int>::preAllocated(32);
+  assert(testHeapArray.len == 0);
+  assert(testHeapArray.cap == 32);
+  assert(testHeapArray.data != NULL);
+  HeapArray<int>::free(&testHeapArray);
+  assert(testHeapArray.len == 0);
+  assert(testHeapArray.cap == 0);
+  assert(testHeapArray.data == NULL);
+}
+
+//
+//
+//
+
+//
+//
+//
+
+static int tests_run = 0;
+static int tests_passed = 0;
+
+#define TEST(name) \
+  do { \
+    printf("  TEST: %s ... ", #name); \
+    tests_run++; \
+  } while(0)
+
+#define PASS() \
+  do { \
+    tests_passed++; \
+    printf("PASS\n"); \
+  } while(0)
+
+#define RUN_TEST(test_func) \
+  do { \
+    TEST(test_func); \
+    test_func(); \
+    PASS(); \
+  } while(0)
+
+export void HeapArray_tests()
+{
+  printf("=== HeapArray_tests ===\n\n");
+
+  RUN_TEST(HeapArray_can_create_pre_allocated_HeapArray);
+
+  printf("\n--- %d/%d tests passed ---\n\n", tests_passed, tests_run);
+}

@@ -32,6 +32,7 @@ typedef struct Transpiler {
   char* baseDir;
   char* entryFilepath;
   char* outputDir;
+  int handleTests;
   SourceAnalyzer* analyzer;
 
   HashSet* alreadyProcessedFiles;
@@ -50,7 +51,8 @@ Transpiler* Transpiler__create(
   const char* inBaseDir,
   const char* inEntryFilepath,
   const char* inOutputDir,
-  PointerHeapArray* inIncludePath)
+  PointerHeapArray* inIncludePath,
+  int handleTests)
 {
 
   // (void)inBaseDir;
@@ -65,6 +67,7 @@ Transpiler* Transpiler__create(
   newTranspiler->baseDir = strdup(inBaseDir);
   newTranspiler->entryFilepath = strdup(inEntryFilepath);
   newTranspiler->outputDir = strdup(inOutputDir);
+  newTranspiler->handleTests = handleTests != 0 ? 1 : 0;
 
   PointerHeapArray* newIncludePath = PointerHeapArray__preAllocate(32);
   PointerHeapArray__pushBack(newIncludePath, newTranspiler->baseDir);
@@ -74,7 +77,7 @@ Transpiler* Transpiler__create(
     PointerHeapArray__pushBack(newIncludePath, inIncludePath->data[ii]);
   }
 
-  newTranspiler->analyzer = SourceAnalyzer__create();
+  newTranspiler->analyzer = SourceAnalyzer__create(newTranspiler->handleTests);
   SourceAnalyzer__scanFromMainFile(newTranspiler->analyzer, newTranspiler->entryFilepath, newIncludePath);
 
   // // debug
@@ -114,6 +117,14 @@ Transpiler* Transpiler__create(
     for (unsigned int ii = 0; ii < sortedAnalyzedFiles->len; ++ii)
     {
       const AnalyzedFile* analyzedFile = sortedAnalyzedFiles->data[ii];
+
+      if (
+        SourceIndexer__hasMainFunction(analyzedFile->indexer) == 1 &&
+        strcmp(analyzedFile->filepath, newTranspiler->entryFilepath) != 0
+      ) {
+        // skip any other files with a main function
+        continue;
+      }
 
       _Transpiler__processFile(newTranspiler, analyzedFile);
     }
@@ -223,7 +234,7 @@ static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIn
 
     const SourceIndexer* indexer = AnalyzedFile__getIndexer(analyzedFile);
 
-    const PointerHeapArray* comptimeCallsList = SourceIndexer__getComptimeCallsList(indexer);
+    const HeapArray<ComptimeCallRef>* comptimeCallsList = SourceIndexer__getComptimeCallsList(indexer);
 
     // if (SourceIndexer__hasComptimeCalls(indexer) != 0) {
     if (comptimeCallsList->len > 0) {
@@ -270,17 +281,17 @@ static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIn
     // const AnalyzedFile* analyzedFile = SourceAnalyzer__getAnalyzed(self->analyzer, allAnalyzed[ii]);
     const AnalyzedFile* analyzedFile = sortedAnalyzedFiles->data[ii];
 
-    const PointerHeapArray* comptimeCallsList = SourceIndexer__getComptimeCallsList(analyzedFile->indexer);
+    const HeapArray<ComptimeCallRef>* comptimeCallsList = SourceIndexer__getComptimeCallsList(analyzedFile->indexer);
 
     for (unsigned int callIdx = 0; callIdx < comptimeCallsList->len; ++callIdx)
     {
-      ComptimeCallRef* currComptime = comptimeCallsList->data[callIdx];
+      ComptimeCallRef* currComptime = &comptimeCallsList->data[callIdx];
 
       // printf(" -> callName: %s\n", currComptime->varName);
-      // printf("   -> totalComptimeCallsArg: %d\n", currComptime->argsList->len);
-      // for (unsigned int callArgIdx = 0; callArgIdx < currComptime->argsList->len; ++callArgIdx)
+      // printf("   -> totalComptimeCallsArg: %d\n", currComptime->argsList.len);
+      // for (unsigned int callArgIdx = 0; callArgIdx < currComptime->argsList.len; ++callArgIdx)
       // {
-      //   const char* argStr = currComptime->argsList->data[callArgIdx];
+      //   const char* argStr = currComptime->argsList.data[callArgIdx];
       //   printf("     -> args[%d]: %s\n", callArgIdx, argStr);
       // }
 
@@ -499,9 +510,9 @@ static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIn
           StreamWriter__write(streamWriter, buffer, strlen(buffer));
         }
 
-        for (unsigned int jj = 0; jj < currComptime->argsList->len; ++jj)
+        for (unsigned int jj = 0; jj < currComptime->argsList.len; ++jj)
         {
-          const char* currArgStr = currComptime->argsList->data[jj];
+          const StringData* currArgStr = &currComptime->argsList.data[jj];
 
           if (jj > 0)
           {
@@ -510,7 +521,7 @@ static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIn
           }
 
           {
-            snprintf(buffer, 1024, "\"%s\"", currArgStr);
+            snprintf(buffer, 1024, "\"%s\"", currArgStr->data);
             StreamWriter__write(streamWriter, buffer, strlen(buffer));
           }
         }
@@ -545,7 +556,7 @@ static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIn
   }
 
   {
-    SourceAnalyzer* tmpAnalyzer = SourceAnalyzer__create();
+    SourceAnalyzer* tmpAnalyzer = SourceAnalyzer__create(0);
     SourceAnalyzer__scanFromMainFile(tmpAnalyzer, comptimeMainFilepath, inIncludePath);
 
     // debug
@@ -600,6 +611,7 @@ static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIn
       buildOpts.inIncludePath = NULL;
       buildOpts.inLibraryPath = NULL;
       buildOpts.doBuild = 1;
+      buildOpts.strictMode = 1;
 
       const int result = BuildCmakeConfig__generateCmakeFile(&buildOpts);
       if (result != 0) {
@@ -717,51 +729,51 @@ typedef struct AnyEdit {
 } AnyEdit;
 
 
-const char* k_queryExportedFuncDefStr = "\n"
-  "\n"
-  "; includes\n"
-  "\n"
-  "(preproc_include path: (_) @import.source) @import\n"
-  "\n"
-  "\n"
-  "; functions definitions\n"
-  "\n"
-  "(function_definition (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
-  "  declarator: [\n"
-  "    (\n"
-  "      function_declarator declarator: (identifier) @name)\n"
-  "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
-  "      function_declarator declarator: (identifier) @name))\n"
-  "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
-  "      function_declarator declarator: (identifier) @name)))\n"
-  "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
-  "      function_declarator declarator: (identifier) @name))))\n"
-  "  ]\n"
-  "  (_) @body) @definition.function\n"
-  "\n"
-  "\n"
-  "; Structs, Unions, Enums, Typedefs\n"
-  "\n"
-  "(struct_specifier (\"export\")? @exported name: (type_identifier) @name templated_type: (type_identifier)? @templated.type (field_declaration_list) @field_declaration_list ) @definition.struct\n"
-  "(enum_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.enum\n"
-  "(union_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.union\n"
-  "(type_definition (\"export\")? @exported declarator: (type_identifier) @name) @definition.typedef\n"
-  "\n"
-  "\n"
-  "; Super string literals\n"
-  "\n"
-  "(super_string_literal) @super.string.literal\n"
-  "\n"
-  "; Static method call\n"
-  "\n"
-  "(static_call_expression (statement_identifier) @namespace (call_expression function: ((identifier) @call.name (_) @call.args))) @static.call\n"
-  "(static_call_expression (comptime_call_expression) @namespace (call_expression function: ((identifier) @call.name (_) @call.args))) @static.call\n"
-  "\n"
-  "; Non-Static method call\n"
-  "\n"
-  "(call_expression function: (field_expression argument: (identifier) @call.caller field: (field_identifier) @call.callee) ((_) @call.args) ) @method.call\n"
-  "\n"
-  "\n";
+// const char* k_queryExportedFuncDefStr = "\n"
+//   "\n"
+//   "; includes\n"
+//   "\n"
+//   "(preproc_include path: (_) @import.source) @import\n"
+//   "\n"
+//   "\n"
+//   "; functions definitions\n"
+//   "\n"
+//   "(function_definition (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
+//   "  declarator: [\n"
+//   "    (\n"
+//   "      function_declarator declarator: (identifier) @name)\n"
+//   "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
+//   "      function_declarator declarator: (identifier) @name))\n"
+//   "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
+//   "      function_declarator declarator: (identifier) @name)))\n"
+//   "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
+//   "      function_declarator declarator: (identifier) @name))))\n"
+//   "  ]\n"
+//   "  (_) @body) @definition.function\n"
+//   "\n"
+//   "\n"
+//   "; Structs, Unions, Enums, Typedefs\n"
+//   "\n"
+//   "(struct_specifier (\"export\")? @exported name: (type_identifier) @name templated_type: (type_identifier)? @templated.type (field_declaration_list) @field_declaration_list ) @definition.struct\n"
+//   "(enum_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.enum\n"
+//   "(union_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.union\n"
+//   "(type_definition (\"export\")? @exported declarator: (type_identifier) @name) @definition.typedef\n"
+//   "\n"
+//   "\n"
+//   "; Super string literals\n"
+//   "\n"
+//   "(super_string_literal) @super.string.literal\n"
+//   "\n"
+//   "; Static method call\n"
+//   "\n"
+//   "(static_call_expression (statement_identifier) @namespace (call_expression function: ((identifier) @call.name (_) @call.args))) @static.call\n"
+//   "(static_call_expression (comptime_call_expression) @namespace (call_expression function: ((identifier) @call.name (_) @call.args))) @static.call\n"
+//   "\n"
+//   "; Non-Static method call\n"
+//   "\n"
+//   "(call_expression function: (field_expression argument: (identifier) @call.caller field: (field_identifier) @call.callee) ((_) @call.args) ) @method.call\n"
+//   "\n"
+//   "\n";
 
 //MARK: _processFile
 static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnalyzedFile)
@@ -777,8 +789,8 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
   // printf(" -> processing file:\n   -> \"%s\"\n", filepath);
   printf(" -> processing file: \"%s\"\n", filepath);
 
-  StopWatch* stopWatch = StopWatch__create();
-  StopWatch__start(stopWatch);
+  StopWatch stopWatch = StopWatch__create();
+  StopWatch__start(&stopWatch);
 
   // self->baseDir
   // self->entryFilepath
@@ -820,8 +832,12 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
   // header file data
   PointerHeapArray* allSignatures = PointerHeapArray__preAllocate(32);
 
+  SourceParser* parser = SourceAnalyzer__getParser(self->analyzer);
+  TSQuery* queryX = SourceParser__getQueryX(parser);
+
   // get the exported function definitions
-  QueryMatchData* newMatchData = SourceParsedFile__query(parsedFile, k_queryExportedFuncDefStr, strlen(k_queryExportedFuncDefStr));
+  // QueryMatchData* newMatchData = SourceParsedFile__query(parsedFile, k_queryExportedFuncDefStr, strlen(k_queryExportedFuncDefStr));
+  QueryMatchData* newMatchData = SourceParsedFile__query(parsedFile, queryX);
 
   ///MARK: collect edits
   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
@@ -1376,7 +1392,22 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
             if ((int)(cursor - fullContent) >= length) {
               break;
             }
-            char *matchStr = strchr(cursor, '\n');
+            // char *matchStr = strchr(cursor, '\n');
+
+            char *matchStr = NULL;
+            int doubleQuoteCounter = 0;
+            for (unsigned int kk = 0; cursor[kk]; ++kk)
+            {
+              if (cursor[kk] == '\n' && doubleQuoteCounter == 0)
+              {
+                matchStr = cursor + kk;
+                break;
+              }
+              else if (cursor[kk] == '\"') {
+                doubleQuoteCounter = doubleQuoteCounter ? 0 : 1;
+              }
+            }
+
             if (matchStr == NULL)
             {
               break;
@@ -1394,23 +1425,29 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
 
               // printf(" ---> currLineStr=%s\n", currLineStr);
 
-              unsigned int cleanLineLen = matchLen * 2;
-              char* cleanLineStrA = calloc(cleanLineLen, sizeof(char));
+              // unsigned int cleanLineLen = matchLen * 2;
+              // char* cleanLineStrA = calloc(cleanLineLen, sizeof(char));
               // char* cleanLineStrB = calloc(cleanLineLen, sizeof(char));
 
-              // -> \" -> \\\"
-              // -> \n -> '\\n'
-              String__replaceAll(currLineStr, "\"", "\\\"", cleanLineStrA, cleanLineLen);
-              // String__replaceAll(cleanLineStrA, "\\n", "\\n", cleanLineStrB, cleanLineLen);
+              // // -> \" -> \\\"
+              // // -> \n -> '\\n'
+              // String__replaceAll(currLineStr, "\"", "\\\"", cleanLineStrA, cleanLineLen);
+              // String__replaceAll(cleanLineStrA, "\n", "\\n", cleanLineStrB, cleanLineLen);
+              StringData cleanLineStrA = String__replaceAll2(currLineStr, "\"", "\\\"");
+              StringData cleanLineStrB = String__replaceAll2(cleanLineStrA.data, "\n", "\\n");
 
-              // printf("   -> cleanLineStrA=%s\n", cleanLineStrA);
+              // printf(" ---> cleanLineStrA.data=%s\n", cleanLineStrA.data);
+              // printf("   -> cleanLineStrB.data=%s\n", cleanLineStrB.data);
 
               StreamWriter__write(streamWriter, "\"", 1);
-              StreamWriter__write(streamWriter, cleanLineStrA, strlen(cleanLineStrA));
+              // StreamWriter__write(streamWriter, cleanLineStrB.data, strlen(cleanLineStrB.data));
+              StreamWriter__write(streamWriter, cleanLineStrB.data, cleanLineStrB.len);
               StreamWriter__write(streamWriter, "\\n\"\n", 4);
 
               // free(cleanLineStrB);
-              free(cleanLineStrA);
+              // free(cleanLineStrA);
+              free(cleanLineStrB.data);
+              free(cleanLineStrA.data);
               free(currLineStr);
 
               cursor = matchStr + 1;
@@ -1769,8 +1806,8 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
   free(inputFilepathExt);
   free(outSrcFolder);
 
-  StopWatch__stop(stopWatch);
-  const double timeInSec = StopWatch__getTime(stopWatch);
+  StopWatch__stop(&stopWatch);
+  const double timeInSec = StopWatch__getTime(&stopWatch);
   printf("   -> %lf sec\n", timeInSec);
   StopWatch__free(&stopWatch);
 

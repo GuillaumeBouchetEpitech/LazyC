@@ -13,7 +13,7 @@ echo ""
 mkdir -p ./cmake-build.native.test
 cmake -B ./cmake-build.native.test \
   -DCMAKE_BUILD_TARGET=test \
-  -DCMAKE_BUILD_TYPE=release \
+  -DCMAKE_BUILD_TYPE=debug_asan \
   -DCMAKE_C_COMPILER_LAUNCHER=/usr/bin/sccache \
   -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/bin/sccache || exit 1
 mold -run cmake --build ./cmake-build.native.test --parallel 5 || exit 1

@@ -15,13 +15,15 @@ typedef struct VarDef
   char *varName;
   char *typeName;
   int pointerLevel;
-} VarDef;
+}
+VarDef;
 
-VarDef *VarDef__create(
+VarDef VarDef__create(
     NodePos inStartPos,
     NodePos inEndPos,
     const char *inVarName,
     const char *inTypeName,
     int inPointerLevel);
 
-void VarDef__free(VarDef **self);
+void VarDef__free(VarDef *self);
+
