@@ -26,6 +26,17 @@ static void HeapArray_can_create_pre_allocated_HeapArray() {
   assert(testHeapArray.data == NULL);
 }
 
+static void HeapArray_can_create_pre_allocated_int_pointer() {
+  HeapArray<int*> testHeapArray = HeapArray<int*>::preAllocated(32);
+  assert(testHeapArray.len == 0);
+  assert(testHeapArray.cap == 32);
+  assert(testHeapArray.data != NULL);
+  HeapArray<int*>::free(&testHeapArray);
+  assert(testHeapArray.len == 0);
+  assert(testHeapArray.cap == 0);
+  assert(testHeapArray.data == NULL);
+}
+
 //
 //
 //

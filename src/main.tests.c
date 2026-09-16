@@ -1,4 +1,7 @@
 
+
+// #include "./stdlib/collections/tests/HeapHashSet.tests.lc"
+#include "./stdlib/collections/tests/HeapHashMap.tests.lc"
 #include "./stdlib/collections/tests/HeapArray.tests.lc"
 #include "./stdlib/collections/tests/HashMap.tests.h"
 #include "./stdlib/collections/tests/HashSet.tests.h"
@@ -29,6 +32,8 @@ int main(void)
   printf("###############\n");
   printf("\n");
 
+  // HeapHashSet_tests();
+  HeapHashMap_tests();
   HeapArray_tests();
   HashMap_tests();
   HashSet_tests();

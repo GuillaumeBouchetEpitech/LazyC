@@ -204,8 +204,8 @@ int BuildCmakeConfig__generateCmakeFile(const BuildCmakeConfigOpts *inOpts)
   {
     const char* k_str = "\n"
       "\n"
-      "set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS \"-O3 -Wall -Wextra -Werror\") # debug\n"
-      "set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS \"-O3\") # debug\n"
+      "set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS \"-g3 -Wall -Wextra -Werror\") # debug\n"
+      "set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS \"-g3\") # debug\n"
       "set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY \"${PROJECT_SOURCE_DIR}/bin\")\n"
       "\n";
 
@@ -215,8 +215,8 @@ int BuildCmakeConfig__generateCmakeFile(const BuildCmakeConfigOpts *inOpts)
   {
     const char* k_str = "\n"
       "\n"
-      "set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS \"-O3\") # debug\n"
-      "set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS \"-O3\") # debug\n"
+      "set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS \"-g3\") # debug\n"
+      "set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS \"-g3\") # debug\n"
       "set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY \"${PROJECT_SOURCE_DIR}/bin\")\n"
       "\n";
 

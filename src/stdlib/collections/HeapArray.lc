@@ -10,8 +10,8 @@ export comptime void HeapArray(const char* inType)
 {
   const char* k_str = ```
 
-///comptime-lazy-c: "text-replace" "HeapArray<{TYPE}>" "HeapArray__{TYPE}"
-///comptime-lazy-c: "resolve-includes" "{TYPE}"
+///comptime-lazy-c: "text-replace" "HeapArray<{RAW_TYPE}>" "HeapArray__{SAFE_TYPE}"
+///comptime-lazy-c: "resolve-includes" "{PTRLESS_TYPE}"
 
 #include "stdlib/core/panic.h"
 
@@ -19,21 +19,21 @@ export comptime void HeapArray(const char* inType)
 #include <stdio.h>
 #include <memory.h>
 
-export struct HeapArray__{TYPE}
+export struct HeapArray__{SAFE_TYPE}
 {
-  {TYPE}* data;
+  {RAW_TYPE}* data;
   unsigned int len;
   unsigned int cap;
 };
 
-export HeapArray__{TYPE} HeapArray__{TYPE}__preAllocated(unsigned int inCapacity)
+export HeapArray__{SAFE_TYPE} HeapArray__{SAFE_TYPE}__preAllocated(unsigned int inCapacity)
 {
-  HeapArray__{TYPE} self;
-  memset(&self, 0, sizeof(HeapArray__{TYPE}));
+  HeapArray__{SAFE_TYPE} self;
+  memset(&self, 0, sizeof(HeapArray__{SAFE_TYPE}));
 
   self.len = 0;
   self.cap = inCapacity < 32 ? 32 : inCapacity;
-  self.data = calloc(self.cap, sizeof({TYPE}));
+  self.data = calloc(self.cap, sizeof({RAW_TYPE}));
   if (!self.data)
   {
     // free(self);
@@ -43,17 +43,17 @@ export HeapArray__{TYPE} HeapArray__{TYPE}__preAllocated(unsigned int inCapacity
   return self;
 }
 
-export void HeapArray__{TYPE}__free(HeapArray__{TYPE}* self)
+export void HeapArray__{SAFE_TYPE}__free(HeapArray__{SAFE_TYPE}* self)
 {
   if (!self || !self->data)
   {
     return;
   }
   free(self->data);
-  memset(self, 0, sizeof(HeapArray__{TYPE}));
+  memset(self, 0, sizeof(HeapArray__{SAFE_TYPE}));
 }
 
-static int _HeapArray__{TYPE}__grow(HeapArray__{TYPE} *self, unsigned int inNewCapacity)
+static int _HeapArray__{SAFE_TYPE}__grow(HeapArray__{SAFE_TYPE} *self, unsigned int inNewCapacity)
 {
   if (self->cap >= inNewCapacity)
   {
@@ -64,13 +64,24 @@ static int _HeapArray__{TYPE}__grow(HeapArray__{TYPE} *self, unsigned int inNewC
     self->cap *= 2;
   }
 
-  self->data = realloc(self->data, self->cap * sizeof({TYPE}));
+  self->data = realloc(self->data, self->cap * sizeof({RAW_TYPE}));
   return self->data == NULL ? -1 : 0;
 }
 
-export int HeapArray__{TYPE}__pushBackRef(HeapArray__{TYPE} *self, {TYPE} *inData)
+export int HeapArray__{SAFE_TYPE}__pushBack(HeapArray__{SAFE_TYPE} *self, {RAW_TYPE} inData)
 {
-  if (_HeapArray__{TYPE}__grow(self, self->len + 1) != 0)
+  if (_HeapArray__{SAFE_TYPE}__grow(self, self->len + 1) != 0)
+  {
+    return -1;
+  }
+  self->data[self->len] = inData;
+  ++self->len;
+  return 0;
+}
+
+export int HeapArray__{SAFE_TYPE}__pushBackRef(HeapArray__{SAFE_TYPE} *self, {RAW_TYPE} *inData)
+{
+  if (_HeapArray__{SAFE_TYPE}__grow(self, self->len + 1) != 0)
   {
     return -1;
   }
@@ -79,32 +90,32 @@ export int HeapArray__{TYPE}__pushBackRef(HeapArray__{TYPE} *self, {TYPE} *inDat
   return 0;
 }
 
-export int HeapArray__{TYPE}__popBack(HeapArray__{TYPE} *self)
+export int HeapArray__{SAFE_TYPE}__popBack(HeapArray__{SAFE_TYPE} *self)
 {
   if (self->len > 0)
   {
     --self->len;
-    // memset(&self->data[self->len], 0, sizeof({TYPE}));
+    // memset(&self->data[self->len], 0, sizeof({RAW_TYPE}));
     // self->data[--self->len] = NULL;
     return 0;
   }
   return -1;
 }
 
-export void HeapArray__{TYPE}__clear(HeapArray__{TYPE} *self)
+export void HeapArray__{SAFE_TYPE}__clear(HeapArray__{SAFE_TYPE} *self)
 {
   self->len = 0;
 }
 
-// export void HeapArray__{TYPE}__clear(HeapArray__{TYPE}* self) {
+// export void HeapArray__{SAFE_TYPE}__clear(HeapArray__{SAFE_TYPE}* self) {
 //   self->len = 0;
 // }
 
-// export {TYPE}* HeapArray__{TYPE}__acquire(HeapArray__{TYPE}* self) {
+// export {RAW_TYPE}* HeapArray__{SAFE_TYPE}__acquire(HeapArray__{SAFE_TYPE}* self) {
 //   if (self->len == self->cap) {
 //     return NULL;
 //   }
-//   {TYPE}* retVal = &self->data[self->len];
+//   {RAW_TYPE}* retVal = &self->data[self->len];
 //   self->len += 1;
 //   return retVal;
 // }
@@ -114,8 +125,18 @@ export void HeapArray__{TYPE}__clear(HeapArray__{TYPE} *self)
   // unsigned int cleanLineLen = strlen(k_str) * 2;
   // char* cleanLineStr = calloc(cleanLineLen, sizeof(char));
 
-  StringData newData = String__replaceAll2(k_str, "{TYPE}", inType);
+  StringData safeType = String__replaceAll2(inType, "*", "Ptr");
+  StringData pointerLessType = String__replaceAll2(inType, "*", "");
 
-  printf("%s\n", newData.data);
-  free(newData.data);
+  StringData newDataA = String__replaceAll2(k_str, "{SAFE_TYPE}", safeType.data);
+  StringData newDataB = String__replaceAll2(newDataA.data, "{RAW_TYPE}", inType);
+  StringData newDataC = String__replaceAll2(newDataB.data, "{PTRLESS_TYPE}", pointerLessType.data);
+
+  printf("%s\n", newDataC.data);
+
+  free(newDataC.data);
+  free(newDataB.data);
+  free(newDataA.data);
+  free(pointerLessType.data);
+  free(safeType.data);
 }

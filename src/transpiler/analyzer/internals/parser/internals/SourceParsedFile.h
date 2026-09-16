@@ -9,34 +9,39 @@
 typedef struct TSTree TSTree;
 typedef struct TSQuery TSQuery;
 
-typedef struct NodePos {
+typedef struct NodePos
+{
   unsigned int row;
   unsigned int column;
   unsigned int index;
-} NodePos;
+}
+NodePos;
 
 typedef struct SourceParsedFile
 {
   StringData fileData;
   TSTree *pTree;
-
   NodePos startPos;
   NodePos endPos;
+}
+SourceParsedFile;
 
-} SourceParsedFile;
-
-typedef struct NodeData {
+typedef struct NodeData
+{
   NodePos startPos;
   NodePos endPos;
   StringData captureName;
-} NodeData;
+}
+NodeData;
 
-typedef struct QueryMatchData {
+typedef struct QueryMatchData
+{
   NodeData* allNodes;
   unsigned int totalNodes;
   HashMap* captureMap;
   struct QueryMatchData* next;
-} QueryMatchData;
+}
+QueryMatchData;
 
 void SourceParsedFile__free(SourceParsedFile** inParsedFile);
 const char* SourceParsedFile__getFileContent(const SourceParsedFile* inParsedFile);
@@ -45,7 +50,6 @@ void SourceParsedFile__debugTree(const SourceParsedFile* inParsedFile, StreamWri
 NodePos SourceParsedFile__getStartPos(SourceParsedFile *self);
 NodePos SourceParsedFile__getEndPos(SourceParsedFile *self);
 
-// QueryMatchData* SourceParsedFile__query(const SourceParsedFile* inParsedFile, const char* inQueryData, unsigned int inQueryLength);
 QueryMatchData *SourceParsedFile__query(const SourceParsedFile *inParsedFile, TSQuery *inQuery);
 void QueryMatchData__free(QueryMatchData** self);
 

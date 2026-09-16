@@ -36,7 +36,7 @@ static void AnalyzedFile_can_be_created_and_freed() {
 
 
 
-static void _analyzeProject(SourceParser* parser, const char* inBaseDir, const char* inSourceFilepath)
+static void _analyzeProject(SourceParser* parser, const char* inBaseDir, const char* inSourceFilepath, int doCheck)
 {
   char expectedMatchesFilepath[1024];
   char debugMatchesFilepath[1024];
@@ -79,6 +79,7 @@ static void _analyzeProject(SourceParser* parser, const char* inBaseDir, const c
     StreamWriter__free(&streamWriter);
   }
 
+  if (doCheck != 0)
   {
 
     // printf(" -> Stat__pathExist(expectedMatchesFilepath): %d\n", Stat__pathExist(expectedMatchesFilepath));
@@ -116,27 +117,27 @@ static void AnalyzedFile_can_analyze_source_file__simple_C() {
 
   {
     char* sourceFilepath = Path__join(2, testFolder, "tests-assets/simple.c");
-    _analyzeProject(parser, testFolder, sourceFilepath);
+    _analyzeProject(parser, testFolder, sourceFilepath, 1);
     free(sourceFilepath);
   }
 
   {
     char* sourceFilepath = Path__join(2, testFolder, "tests-assets/comptime-comments.lc");
-    _analyzeProject(parser, testFolder, sourceFilepath);
+    _analyzeProject(parser, testFolder, sourceFilepath, 1);
     free(sourceFilepath);
   }
 
   {
     char* sourceFilepath = Path__join(2, testFolder, "tests-assets/importing-files.lc");
-    _analyzeProject(parser, testFolder, sourceFilepath);
+    _analyzeProject(parser, testFolder, sourceFilepath, 1);
     free(sourceFilepath);
   }
 
-  // {
-  //   char* sourceFilepath = Path__join(2, testFolder, "tests-assets/define-struct-union-enum-typedef.h");
-  //   _analyzeProject(parser, testFolder, sourceFilepath);
-  //   free(sourceFilepath);
-  // }
+  {
+    char* sourceFilepath = Path__join(2, testFolder, "tests-assets/define-struct-union-enum-typedef.h");
+    _analyzeProject(parser, testFolder, sourceFilepath, 0);
+    free(sourceFilepath);
+  }
 
   SourceParser__free(&parser);
   free(testFolder);

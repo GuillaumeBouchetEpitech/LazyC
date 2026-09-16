@@ -11,6 +11,7 @@
 // #include "stdlib/filesystem/readFile.h"
 #include "stdlib/filesystem/pathUtils.h"
 #include "stdlib/strings/trimStr.h"
+#include "stdlib/strings/replaceAll2.h"
 
 #include "stdlib/time/StopWatch.h"
 
@@ -24,16 +25,9 @@
 
 
 // forward declaration(s)
-int AnalyzedFile__queryAll(AnalyzedFile *self, TSQuery* query);
-// int AnalyzedFile__queryImports(AnalyzedFile *self);
-// int AnalyzedFile__queryScopes(AnalyzedFile *self);
-// int AnalyzedFile__queryStructDef(AnalyzedFile *self);
-// int AnalyzedFile__queryFuncSignatures(AnalyzedFile *self);
-// int AnalyzedFile__queryVarDef(AnalyzedFile *self);
-// int AnalyzedFile__queryFuncCalls(AnalyzedFile *self);
-// int AnalyzedFile__queryComptimeCalls(AnalyzedFile *self);
-int AnalyzedFile__queryVarRef(AnalyzedFile *self, TSQuery* query);
-int AnalyzedFile__queryComptimeComments(AnalyzedFile *self, TSQuery* query);
+int AnalyzedFile__queryAll(AnalyzedFile *self, SourceParser *inParser);
+int AnalyzedFile__queryVarRef(AnalyzedFile *self, SourceParser *inParser);
+int AnalyzedFile__queryComptimeComments(AnalyzedFile *self, SourceParser *inParser);
 
 //MARK: AnalyzedFile_create
 AnalyzedFile *AnalyzedFile__create(SourceParser *inParser, const char *inFilepath)
@@ -74,37 +68,12 @@ AnalyzedFile *AnalyzedFile__create(SourceParser *inParser, const char *inFilepat
     return NULL;
   }
 
-
-
-  // printf(" ---> sub-analyze\n");
-  // StopWatch stopWatch = StopWatch__create();
-  // StopWatch__start(&stopWatch);
-
-  TSQuery* queryA = SourceParser__getQueryA(inParser);
-  TSQuery* queryB = SourceParser__getQueryB(inParser);
-  TSQuery* queryC = SourceParser__getQueryC(inParser);
-
-  if (
-      // AnalyzedFile__queryImports(analyzedFile) != 0 ||
-      // AnalyzedFile__queryScopes(analyzedFile) != 0 ||
-      // AnalyzedFile__queryStructDef(analyzedFile) != 0 ||
-      // AnalyzedFile__queryFuncSignatures(analyzedFile) != 0 ||
-      // AnalyzedFile__queryComptimeCalls(analyzedFile) != 0 ||
-      // AnalyzedFile__queryVarDef(analyzedFile) != 0 ||
-      // AnalyzedFile__queryFuncCalls(analyzedFile) != 0 ||
-
-      AnalyzedFile__queryAll(analyzedFile, queryA) != 0 ||
-
-      AnalyzedFile__queryVarRef(analyzedFile, queryB) != 0 ||
-      AnalyzedFile__queryComptimeComments(analyzedFile, queryC) != 0) {
+  if (AnalyzedFile__queryAll(analyzedFile, inParser) != 0 ||
+      AnalyzedFile__queryVarRef(analyzedFile, inParser) != 0 ||
+      AnalyzedFile__queryComptimeComments(analyzedFile, inParser) != 0) {
     AnalyzedFile__free(&analyzedFile);
     return NULL;
   }
-
-  // StopWatch__stop(&stopWatch);
-  // const double timeInSec = StopWatch__getTime(&stopWatch);
-  // printf("   -> %lf sec\n", timeInSec);
-  // StopWatch__free(&stopWatch);
 
   SourceIndexer__computeScopesHierarchy(analyzedFile->indexer);
 
@@ -134,113 +103,109 @@ void AnalyzedFile__free(AnalyzedFile **self)
   *self = NULL;
 }
 
+const char* k_queryAll_str = "\n"
+  "\n"
+  "\n"
+  "; includes\n"
+  "\n"
+  "(preproc_include path: (_) @import.source) @import\n"
+  "\n"
+  "\n"
+  "; block scopes\n"
+  "\n"
+  "(compound_statement) @block.scope\n"
+  "\n"
+  "; functions definitions (1)\n"
+  "\n"
+  "(function_definition (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
+  "  declarator: [\n"
+  "    (\n"
+  "      function_declarator declarator: (identifier) @name)\n"
+  "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
+  "      function_declarator declarator: (identifier) @name))\n"
+  "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
+  "      function_declarator declarator: (identifier) @name)))\n"
+  "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
+  "      function_declarator declarator: (identifier) @name))))\n"
+  "  ]\n"
+  "  (_) @body) @definition.function\n"
+  "\n"
+  "\n"
+  "; Structs, Unions, Enums, Typedefs\n"
+  "\n"
+  // "(struct_specifier (\"export\")? @exported name: (type_identifier) @name templated_type: (type_identifier)? @templated.type (field_declaration_list) @field_declaration_list) @definition.struct\n"
+  "(struct_specifier (\"export\")? @exported name: (type_identifier)? @name templated_type: (type_identifier)? @templated.type (field_declaration_list)) @definition.struct\n"
+  "(union_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.union\n"
+  "(enum_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.enum\n"
+  "(type_definition (\"export\")? @exported declarator: (type_identifier) @name) @definition.typedef\n"
+  "\n"
+  // "; Anonymous Structs\n"
+  // "(struct_specifier (field_declaration_list) @field_declaration_list) @definition.struct\n"
+  // "(struct_specifier (field_declaration_list)) @definition.struct.anon\n"
+  // "\n"
+  "\n"
+  "; var declaration\n"
+  "\n"
+  "(declaration (_) @type (identifier) @name (_)? @body) @declaration.variable\n"
+  "(declaration (_) @type (init_declarator (identifier) @name (_)? @body)) @declaration.variable\n"
+  "(declaration (_) @type (init_declarator (pointer_declarator)+ @name)) @declaration.variable\n"
+  "\n"
+  "; field declaration\n"
+  "\n"
+  "(field_declaration (_) @type (field_identifier) @name) @declaration.variable\n"
+  "(field_declaration (_) @type (pointer_declarator)+ @name) @declaration.variable\n"
+  "\n"
+  "; functions params\n"
+  "\n"
+  "(parameter_declaration (_) @type (identifier) @name (_)? @body) @declaration.variable\n"
+  "(parameter_declaration (_) @type (pointer_declarator)+ @name) @declaration.variable\n"
+  "\n"
+  "\n"
+  "; function calls\n"
+  "\n"
+  "(call_expression function: ((identifier) @call.name (_) @call.args)) @call\n"
+  "(call_expression function: (field_expression field: (field_identifier) @call.name) ((_) @call.args) ) @call\n"
+  "\n"
+  "\n"
+  "; comptime calls\n"
+  "\n"
+  "(comptime_call_expression function: ((identifier) @call.name arguments: (_) @call.args)) @comptime.call\n"
+  "\n"
+  "\n"
+  "; functions signatures\n"
+  "\n"
+  // "(declaration (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
+  "(declaration type: (_) @return.type\n"
+  "  declarator: [\n"
+  "    (\n"
+  "      function_declarator declarator: (identifier) @name)\n"
+  "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
+  "      function_declarator declarator: (identifier) @name))\n"
+  "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
+  "      function_declarator declarator: (identifier) @name)))\n"
+  "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
+  "      function_declarator declarator: (identifier) @name))))\n"
+  "  ]\n"
+  "  ) @definition.function\n"
+  "\n"
+  "\n"
+  "\n";
+
 //MARK: queryAll
-int AnalyzedFile__queryAll(AnalyzedFile *self, TSQuery* query)
+int AnalyzedFile__queryAll(AnalyzedFile *self, SourceParser *inParser)
 {
-  // const char* k_queryStr = "\n"
-  //   "\n"
-  //   "\n"
-  //   "; includes\n"
-  //   "\n"
-  //   "(preproc_include path: (_) @import.source) @import\n"
-  //   "\n"
-  //   "\n"
-  //   "; block scopes\n"
-  //   "\n"
-  //   "(compound_statement) @block.scope\n"
-  //   "\n"
-  //   "; functions definitions (1)\n"
-  //   "\n"
-  //   "(function_definition (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
-  //   "  declarator: [\n"
-  //   "    (\n"
-  //   "      function_declarator declarator: (identifier) @name)\n"
-  //   "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
-  //   "      function_declarator declarator: (identifier) @name))\n"
-  //   "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
-  //   "      function_declarator declarator: (identifier) @name)))\n"
-  //   "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
-  //   "      function_declarator declarator: (identifier) @name))))\n"
-  //   "  ]\n"
-  //   "  (_) @body) @definition.function\n"
-  //   "\n"
-  //   "\n"
-  //   "; Structs, Unions, Enums, Typedefs\n"
-  //   "\n"
-  //   "(struct_specifier (\"export\")? @exported name: (type_identifier) @name templated_type: (type_identifier)? @templated.type (field_declaration_list) @field_declaration_list ) @definition.struct\n"
-  //   "(enum_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.enum\n"
-  //   "(union_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.union\n"
-  //   "(type_definition (\"export\")? @exported declarator: (type_identifier) @name) @definition.typedef\n"
-  //   "\n"
-  //   "\n"
-  //   "; var declaration\n"
-  //   "\n"
-  //   "(declaration (_) @type (identifier) @name (_)? @body) @declaration.variable\n"
-  //   "(declaration (_) @type (init_declarator (identifier) @name (_)? @body)) @declaration.variable\n"
-  //   "(declaration (_) @type (init_declarator (pointer_declarator)+ @name)) @declaration.variable\n"
-  //   "\n"
-  //   "; functions params\n"
-  //   "\n"
-  //   "(parameter_declaration (_) @type (identifier) @name (_)? @body) @declaration.variable\n"
-  //   "(parameter_declaration (_) @type (pointer_declarator)+ @name) @declaration.variable\n"
-  //   "\n"
-  //   "\n"
-  //   "; function calls\n"
-  //   "\n"
-  //   "(call_expression function: ((identifier) @call.name (_) @call.args)) @call\n"
-  //   "(call_expression function: (field_expression field: (field_identifier) @call.name) ((_) @call.args) ) @call\n"
-  //   "\n"
-  //   "\n"
-  //   "; comptime calls\n"
-  //   "\n"
-  //   "(comptime_call_expression function: ((identifier) @call.name arguments: (_) @call.args)) @comptime.call\n"
-  //   "\n"
-  //   "\n"
-  //   "; functions signatures\n"
-  //   "\n"
-  //   // "(declaration (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
-  //   "(declaration type: (_) @return.type\n"
-  //   "  declarator: [\n"
-  //   "    (\n"
-  //   "      function_declarator declarator: (identifier) @name)\n"
-  //   "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
-  //   "      function_declarator declarator: (identifier) @name))\n"
-  //   "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
-  //   "      function_declarator declarator: (identifier) @name)))\n"
-  //   "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
-  //   "      function_declarator declarator: (identifier) @name))))\n"
-  //   "  ]\n"
-  //   "  ) @definition.function\n"
-  //   "\n"
-  //   "\n"
-  //   "\n";
-
-  // printf("k_queryStr: %s\n", k_queryStr);
-
   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
 
+  TSQuery* queryA = SourceParser__parseQuery(inParser, "queryA", k_queryAll_str);
 
-  // printf(" ---> sub-analyze\n");
-  // StopWatch stopWatch = StopWatch__create();
-  // StopWatch__start(&stopWatch);
-
-  // QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
-  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, query);
-
-  // StopWatch__stop(&stopWatch);
-  // const double timeInSec = StopWatch__getTime(&stopWatch);
-  // printf("   -> %lf sec\n", timeInSec);
-  // StopWatch__free(&stopWatch);
+  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, queryA);
 
   char* currDir = Path__dirname(self->filepath);
 
   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
   {
-    if (
-      strcmp(cursor->allNodes[0].captureName.data, "import") == 0
-      // HashMap__contains(cursor->captureMap, "import") //&&
-      // HashMap__contains(cursor->captureMap, "import.source")
-    ) {
+    if (strcmp(cursor->allNodes[0].captureName.data, "import") == 0)
+    {
       NodeData* sourceNode = HashMap__get(cursor->captureMap, "import.source");
 
       const char* srcStr = parsedFileContent + sourceNode->startPos.index;
@@ -288,11 +253,8 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, TSQuery* query)
       //   free(tmpContent);
       // }
     }
-    else if (
-      strcmp(cursor->allNodes[0].captureName.data, "definition.function") == 0
-      // HashMap__contains(cursor->captureMap, "definition.function") //&&
-      // HashMap__contains(cursor->captureMap, "name")
-    ) {
+    else if (strcmp(cursor->allNodes[0].captureName.data, "definition.function") == 0)
+    {
       NodeData* mainNode = HashMap__get(cursor->captureMap, "definition.function");
       NodeData* nameNode = HashMap__get(cursor->captureMap, "name");
       NodeData* comptimeNode = HashMap__get(cursor->captureMap, "comptime");
@@ -316,10 +278,8 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, TSQuery* query)
 
       free(tmpFuncName);
     }
-    else if (
-      strcmp(cursor->allNodes[0].captureName.data, "block.scope") == 0
-      // HashMap__contains(cursor->captureMap, "block.scope")
-    ) {
+    else if (strcmp(cursor->allNodes[0].captureName.data, "block.scope") == 0)
+    {
       NodeData* mainNode = HashMap__get(cursor->captureMap, "block.scope");
 
       // printf(" -{BLOCK}-> {---}\n");
@@ -330,11 +290,8 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, TSQuery* query)
         strcmp(cursor->allNodes[0].captureName.data, "definition.struct") == 0 ||
         strcmp(cursor->allNodes[0].captureName.data, "definition.enum") == 0 ||
         strcmp(cursor->allNodes[0].captureName.data, "definition.union") == 0 ||
-        strcmp(cursor->allNodes[0].captureName.data, "definition.typedef") == 0
-        // HashMap__contains(cursor->captureMap, "definition.struct") ||
-        // HashMap__contains(cursor->captureMap, "definition.enum") ||
-        // HashMap__contains(cursor->captureMap, "definition.union") ||
-        // HashMap__contains(cursor->captureMap, "definition.typedef")
+        strcmp(cursor->allNodes[0].captureName.data, "definition.typedef") == 0 ||
+        strcmp(cursor->allNodes[0].captureName.data, "definition.struct.anon") == 0
       )
     ) {
 
@@ -342,27 +299,50 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, TSQuery* query)
       const NodeData* exportedNode = HashMap__get(cursor->captureMap, "exported");
 
       {
-        const char* pStrData = parsedFileContent + nameNode->startPos.index;
-        const int strLen = (nameNode->endPos.index - nameNode->startPos.index);
+        printf(" -{STRUCT?}-> {%s}\n", cursor->allNodes[0].captureName.data);
 
-        char* tmpName = strndup(pStrData, strLen);
+        char* tmpName = NULL;
+        if (nameNode)
+        {
+          const char* pStrData = parsedFileContent + nameNode->startPos.index;
+          const int strLen = (nameNode->endPos.index - nameNode->startPos.index);
+          tmpName = strndup(pStrData, strLen);
 
-        // printf(" -----> { %s }\n", tmpName);
+          printf(" -----> { %s }\n", tmpName);
 
-        if (self->fileType == SOURCE_H || (self->fileType == SOURCE_LC && exportedNode != NULL)) {
-          SourceIndexer__addExportedDef(self->indexer, tmpName);
+          if (self->fileType == SOURCE_H || (self->fileType == SOURCE_LC && exportedNode != NULL))
+          {
+            SourceIndexer__addExportedDef(self->indexer, tmpName);
+          }
+        }
+
+        if (strcmp(cursor->allNodes[0].captureName.data, "definition.struct") == 0)
+        {
+          SourceIndexer__addStructScope(self->indexer, tmpName, cursor->allNodes[0].startPos, cursor->allNodes[0].endPos);
+        }
+        else if (strcmp(cursor->allNodes[0].captureName.data, "definition.enum") == 0)
+        {
+          SourceIndexer__addEnumScope(self->indexer, tmpName, cursor->allNodes[0].startPos, cursor->allNodes[0].endPos);
+        }
+        else if (strcmp(cursor->allNodes[0].captureName.data, "definition.union") == 0)
+        {
+          SourceIndexer__addUnionScope(self->indexer, tmpName, cursor->allNodes[0].startPos, cursor->allNodes[0].endPos);
+        }
+        else if (strcmp(cursor->allNodes[0].captureName.data, "definition.typedef") == 0)
+        {
+          SourceIndexer__addTypedefScope(self->indexer, tmpName, cursor->allNodes[0].startPos, cursor->allNodes[0].endPos);
+        }
+        else if (strcmp(cursor->allNodes[0].captureName.data, "definition.struct.anon") == 0)
+        {
+          SourceIndexer__addStructScope(self->indexer, NULL, cursor->allNodes[0].startPos, cursor->allNodes[0].endPos);
         }
 
         free(tmpName);
       }
 
     }
-    else if (
-      strcmp(cursor->allNodes[0].captureName.data, "declaration.variable") == 0
-      // HashMap__contains(cursor->captureMap, "declaration.variable") //&&
-      // HashMap__contains(cursor->captureMap, "type") &&
-      // HashMap__contains(cursor->captureMap, "name")
-    ) {
+    else if (strcmp(cursor->allNodes[0].captureName.data, "declaration.variable") == 0)
+    {
       NodeData* mainNode = HashMap__get(cursor->captureMap, "declaration.variable");
       NodeData* typeNode = HashMap__get(cursor->captureMap, "type");
       NodeData* nameNode = HashMap__get(cursor->captureMap, "name");
@@ -403,11 +383,8 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, TSQuery* query)
       free(tmpType);
       free(tmpName);
     }
-    else if (
-      strcmp(cursor->allNodes[0].captureName.data, "call") == 0
-      // HashMap__contains(cursor->captureMap, "call") //&&
-      // HashMap__contains(cursor->captureMap, "call.name")
-    ) {
+    else if (strcmp(cursor->allNodes[0].captureName.data, "call") == 0)
+    {
       NodeData* mainNode = HashMap__get(cursor->captureMap, "call");
       NodeData* nameNode = HashMap__get(cursor->captureMap, "call.name");
 
@@ -421,12 +398,8 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, TSQuery* query)
 
       free(tmpName);
     }
-    else if (
-      strcmp(cursor->allNodes[0].captureName.data, "comptime.call") == 0
-      // HashMap__contains(cursor->captureMap, "comptime.call") //&&
-      // HashMap__contains(cursor->captureMap, "call.name") &&
-      // HashMap__contains(cursor->captureMap, "call.args")
-    ) {
+    else if (strcmp(cursor->allNodes[0].captureName.data, "comptime.call") == 0)
+    {
       NodeData* mainNode = HashMap__get(cursor->captureMap, "comptime.call");
       NodeData* nameNode = HashMap__get(cursor->captureMap, "call.name");
       NodeData* argsNode = HashMap__get(cursor->captureMap, "call.args");
@@ -450,8 +423,6 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, TSQuery* query)
     else if (
       (self->fileType == SOURCE_H) &&
       strcmp(cursor->allNodes[0].captureName.data, "definition.function") == 0
-      // HashMap__contains(cursor->captureMap, "definition.function") //&&
-      // HashMap__contains(cursor->captureMap, "name")
     ) {
       // NodeData* mainNode = HashMap__get(cursor->captureMap, "definition.function");
       NodeData* nameNode = HashMap__get(cursor->captureMap, "name");
@@ -477,459 +448,21 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, TSQuery* query)
   return 0;
 }
 
-// //MARK: queryImports
-// int AnalyzedFile__queryImports(AnalyzedFile *self)
-// {
-//   const char* k_queryStr = "\n"
-//     "\n"
-//     "; includes\n"
-//     "\n"
-//     "(preproc_include path: (_) @import.source) @import\n"
-//     "\n";
-
-//   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-//   QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
-
-//   char* currDir = Path__dirname(self->filepath);
-
-//   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
-//   {
-//     if (
-//       HashMap__contains(cursor->captureMap, "import") //&&
-//       // HashMap__contains(cursor->captureMap, "import.source")
-//     ) {
-//       NodeData* sourceNode = HashMap__get(cursor->captureMap, "import.source");
-
-//       const char* srcStr = parsedFileContent + sourceNode->startPos.index;
-//       const unsigned int contentSize = sourceNode->endPos.index - sourceNode->startPos.index;
-
-//       if (
-//         contentSize > 2 &&
-//         srcStr[0] == '\"' &&
-//         srcStr[contentSize - 1] == '\"'
-//       ) {
-//         // #include "some-filepath"
-
-//         char* tmpContent = strndup(srcStr + 1, contentSize - 2);
-
-//         // printf(" ---> [REL] {%s}\n", tmpContent);
-
-//         if (tmpContent[0] == '/')
-//         {
-//           // path is absolute -> just add as is
-//           SourceIndexer__addImport(self->indexer, tmpContent);
-//         }
-//         else if (tmpContent[0] == '.')
-//         {
-//           // path is relative -> need resolving
-//           // TODO: must support user provided "include-path"
-//           char* absolutePath = Path__join(2, currDir, tmpContent);
-//           // printf("   -> [ABS] {%s}\n", absolutePath);
-
-//           SourceIndexer__addImport(self->indexer, absolutePath);
-
-//           free(absolutePath);
-//         }
-//         else {
-//           SourceIndexer__addRawImport(self->indexer, tmpContent);
-//         }
-
-
-//         free(tmpContent);
-//       }
-//       // else
-//       // {
-//       //   // #include <some-filepath>
-
-//       //   char* tmpContent = strndup(srcStr, contentSize);
-//       //   printf(" ---> [%s]\n", tmpContent);
-//       //   free(tmpContent);
-//       // }
-//     }
-//   }
-
-//   free(currDir);
-
-//   QueryMatchData__free(&newMatchData);
-//   return 0;
-// }
-
-// //MARK: queryScopes
-// int AnalyzedFile__queryScopes(AnalyzedFile *self)
-// {
-//   const char* k_queryStr = "\n"
-//     "\n"
-//     "; block scopes\n"
-//     "\n"
-//     "(compound_statement) @block.scope\n"
-//     "\n"
-//     "; functions definitions (1)\n"
-//     "\n"
-//     "(function_definition (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
-//     "  declarator: [\n"
-//     "    (\n"
-//     "      function_declarator declarator: (identifier) @name)\n"
-//     "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
-//     "      function_declarator declarator: (identifier) @name))\n"
-//     "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
-//     "      function_declarator declarator: (identifier) @name)))\n"
-//     "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
-//     "      function_declarator declarator: (identifier) @name))))\n"
-//     "  ]\n"
-//     "  (_) @body) @definition.function\n"
-//     "\n";
-
-//   // printf("k_queryStr: %s\n", k_queryStr);
-
-//   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-//   QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
-
-//   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
-//   {
-//     if (
-//       HashMap__contains(cursor->captureMap, "definition.function") //&&
-//       // HashMap__contains(cursor->captureMap, "name")
-//     ) {
-//       NodeData* mainNode = HashMap__get(cursor->captureMap, "definition.function");
-//       NodeData* nameNode = HashMap__get(cursor->captureMap, "name");
-//       NodeData* comptimeNode = HashMap__get(cursor->captureMap, "comptime");
-//       NodeData* exportedNode = HashMap__get(cursor->captureMap, "exported");
-
-//       const char* nameStrPtr = parsedFileContent + nameNode->startPos.index;
-//       const unsigned int nameStrLen = nameNode->endPos.index - nameNode->startPos.index;
-
-//       char* tmpFuncName = strndup(nameStrPtr, nameStrLen);
-//       // printf(" -{FUNC}-> {name=%s}\n", tmpFuncName);
-
-//       SourceIndexer__addFuncScope(self->indexer, tmpFuncName, mainNode->startPos, mainNode->endPos);
-
-//       if (comptimeNode) {
-//         SourceIndexer__addComptimeFunc(self->indexer, tmpFuncName);
-//       }
-
-//       if (self->fileType == SOURCE_H || (self->fileType == SOURCE_LC && exportedNode != NULL)) {
-//         SourceIndexer__addExportedDef(self->indexer, tmpFuncName);
-//       }
-
-//       free(tmpFuncName);
-//     }
-//     else if (
-//       HashMap__contains(cursor->captureMap, "block.scope")
-//     ) {
-//       NodeData* mainNode = HashMap__get(cursor->captureMap, "block.scope");
-
-//       // printf(" -{BLOCK}-> {---}\n");
-//       SourceIndexer__addBlockScope(self->indexer, mainNode->startPos, mainNode->endPos);
-//     }
-//   }
-
-//   QueryMatchData__free(&newMatchData);
-//   return 0;
-// }
-
-// //MARK: queryStructDef
-// int AnalyzedFile__queryStructDef(AnalyzedFile *self)
-// {
-//   if (self->fileType == SOURCE_C) {
-//     return 0;
-//   }
-
-//   const char* k_queryStr = "\n"
-//     "\n"
-//     "; Structs, Unions, Enums, Typedefs\n"
-//     "\n"
-//     "(struct_specifier (\"export\")? @exported name: (type_identifier) @name templated_type: (type_identifier)? @templated.type (field_declaration_list) @field_declaration_list ) @definition.struct\n"
-//     "(enum_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.enum\n"
-//     "(union_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.union\n"
-//     "(type_definition (\"export\")? @exported declarator: (type_identifier) @name) @definition.typedef\n"
-//     "\n"
-//     "\n";
-
-//   // printf("k_queryStr: %s\n", k_queryStr);
-
-//   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-//   QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
-
-//   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
-//   {
-//     if (
-//       HashMap__contains(cursor->captureMap, "definition.struct") ||
-//       HashMap__contains(cursor->captureMap, "definition.enum") ||
-//       HashMap__contains(cursor->captureMap, "definition.union") ||
-//       HashMap__contains(cursor->captureMap, "definition.typedef")
-//     ) {
-
-//       const NodeData* nameNode = HashMap__get(cursor->captureMap, "name");
-//       const NodeData* exportedNode = HashMap__get(cursor->captureMap, "exported");
-
-//       {
-//         const char* pStrData = parsedFileContent + nameNode->startPos.index;
-//         const int strLen = (nameNode->endPos.index - nameNode->startPos.index);
-
-//         char* tmpName = strndup(pStrData, strLen);
-
-//         // printf(" -----> { %s }\n", tmpName);
-
-//         if (self->fileType == SOURCE_H || (self->fileType == SOURCE_LC && exportedNode != NULL)) {
-//           SourceIndexer__addExportedDef(self->indexer, tmpName);
-//         }
-
-//         free(tmpName);
-//       }
-
-//     }
-
-//   }
-
-//   QueryMatchData__free(&newMatchData);
-//   return 0;
-// }
-
-// //MARK: queryVarDef
-// int AnalyzedFile__queryVarDef(AnalyzedFile *self)
-// {
-//   const char* k_queryStr = "\n"
-//     "\n"
-//     "; var declaration\n"
-//     "\n"
-//     "(declaration (_) @type (identifier) @name (_)? @body) @declaration.variable\n"
-//     "(declaration (_) @type (init_declarator (identifier) @name (_)? @body)) @declaration.variable\n"
-//     "(declaration (_) @type (init_declarator (pointer_declarator)+ @name)) @declaration.variable\n"
-//     "\n"
-//     "; functions params\n"
-//     "\n"
-//     "(parameter_declaration (_) @type (identifier) @name (_)? @body) @declaration.variable\n"
-//     "(parameter_declaration (_) @type (pointer_declarator)+ @name) @declaration.variable\n"
-//     "\n";
-
-//   // printf("k_queryStr: %s\n", k_queryStr);
-
-//   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-//   QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
-
-//   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
-//   {
-//     if (
-//       HashMap__contains(cursor->captureMap, "declaration.variable") //&&
-//       // HashMap__contains(cursor->captureMap, "type") &&
-//       // HashMap__contains(cursor->captureMap, "name")
-//     ) {
-//       NodeData* mainNode = HashMap__get(cursor->captureMap, "declaration.variable");
-//       NodeData* typeNode = HashMap__get(cursor->captureMap, "type");
-//       NodeData* nameNode = HashMap__get(cursor->captureMap, "name");
-
-//       const char* typeStr = parsedFileContent + typeNode->startPos.index;
-//       const unsigned int typeSize = typeNode->endPos.index - typeNode->startPos.index;
-//       char* tmpType = strndup(typeStr, typeSize);
-
-//       const char* nameStr = parsedFileContent + nameNode->startPos.index;
-//       const unsigned int nameSize = nameNode->endPos.index - nameNode->startPos.index;
-//       char* tmpName = strndup(nameStr, nameSize);
-
-//       // get the pointer level
-//       int pointerLevel = 0;
-//       for (unsigned int ii = 0; ii < nameSize; ++ii) {
-//         if (nameStr[ii] == '*') {
-//           ++pointerLevel;
-//         } else {
-//           break;
-//         }
-//       }
-//       if (pointerLevel > 0) {
-//         // isolate the variable name
-//         unsigned int ii = 0;
-//         for (; ii < nameSize; ++ii) {
-//           if (nameStr[ii] != '*' && nameStr[ii] != ' ' && nameStr[ii] != '\t') {
-//             break;
-//           }
-//         }
-//         free(tmpName);
-//         tmpName = strndup(nameStr + ii, nameSize - ii);
-//       }
-
-//       // printf(" -{DECL}-> {type=%s, name=%s, ptrLvl=%d}\n", tmpType, tmpName, pointerLevel);
-
-//       SourceIndexer__addVarDecl(self->indexer, tmpName, tmpType, pointerLevel, mainNode->startPos, mainNode->endPos);
-
-//       free(tmpType);
-//       free(tmpName);
-//     }
-//   }
-
-//   QueryMatchData__free(&newMatchData);
-//   return 0;
-// }
-
-// //MARK: queryFuncCalls
-// int AnalyzedFile__queryFuncCalls(AnalyzedFile *self)
-// {
-//   const char* k_queryStr = "\n"
-//     "\n"
-//     "; function calls\n"
-//     "\n"
-//     "(call_expression function: ((identifier) @call.name (_) @call.args)) @call\n"
-//     "(call_expression function: (field_expression field: (field_identifier) @call.name) ((_) @call.args) ) @call\n"
-//     "\n";
-
-//   // printf("k_queryStr: %s\n", k_queryStr);
-
-//   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-//   QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
-
-//   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
-//   {
-//     if (
-//       HashMap__contains(cursor->captureMap, "call") //&&
-//       // HashMap__contains(cursor->captureMap, "call.name")
-//     ) {
-//       NodeData* mainNode = HashMap__get(cursor->captureMap, "call");
-//       NodeData* nameNode = HashMap__get(cursor->captureMap, "call.name");
-
-//       const char* nameStr = parsedFileContent + nameNode->startPos.index;
-//       const unsigned int nameSize = nameNode->endPos.index - nameNode->startPos.index;
-//       char* tmpName = strndup(nameStr, nameSize);
-
-//       // printf(" -{CALL}-> {name=%s}\n", tmpName);
-
-//       SourceIndexer__addFunCallRef(self->indexer, tmpName, mainNode->startPos, mainNode->endPos);
-
-//       free(tmpName);
-//     }
-//   }
-
-//   QueryMatchData__free(&newMatchData);
-//   return 0;
-// }
-
-// //MARK: queryComptimeCalls
-// int AnalyzedFile__queryComptimeCalls(AnalyzedFile *self)
-// {
-//   const char* k_queryStr = "\n"
-//     "\n"
-//     "; comptime calls\n"
-//     "\n"
-//     "(comptime_call_expression function: ((identifier) @call.name arguments: (_) @call.args)) @comptime.call\n"
-//     "\n";
-
-//   // printf("k_queryStr: %s\n", k_queryStr);
-
-//   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-//   QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
-
-
-//   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
-//   {
-//     if (
-//       HashMap__contains(cursor->captureMap, "comptime.call") //&&
-//       // HashMap__contains(cursor->captureMap, "call.name") &&
-//       // HashMap__contains(cursor->captureMap, "call.args")
-//     ) {
-//       NodeData* mainNode = HashMap__get(cursor->captureMap, "comptime.call");
-//       NodeData* nameNode = HashMap__get(cursor->captureMap, "call.name");
-//       NodeData* argsNode = HashMap__get(cursor->captureMap, "call.args");
-
-//       const char* nameStr = parsedFileContent + nameNode->startPos.index;
-//       const unsigned int nameSize = nameNode->endPos.index - nameNode->startPos.index;
-//       char* tmpName = strndup(nameStr, nameSize);
-
-//       const char* argsStr = parsedFileContent + argsNode->startPos.index;
-//       const unsigned int argsSize = argsNode->endPos.index - argsNode->startPos.index;
-//       char* tmpArgs = strndup(argsStr, argsSize);
-
-//       // printf(" ---{COMPTIME-CALL}-> {name=%s}\n", tmpName);
-//       // printf("   -{COMPTIME-ARGS}-> {args=%s}\n", tmpArgs);
-
-//       SourceIndexer__addComptimeCall(self->indexer, tmpName, tmpArgs, mainNode->startPos, mainNode->endPos);
-
-//       free(tmpArgs);
-//       free(tmpName);
-//     }
-//   }
-
-//   QueryMatchData__free(&newMatchData);
-//   return 0;
-// }
-
-// //MARK: queryFuncSignatures
-// int AnalyzedFile__queryFuncSignatures(AnalyzedFile *self)
-// {
-//   if (self->fileType != SOURCE_H) {
-//     return 0;
-//   }
-
-//   const char* k_queryStr = "\n"
-//     "\n"
-//     "; functions signatures\n"
-//     "\n"
-//     // "(declaration (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
-//     "(declaration type: (_) @return.type\n"
-//     "  declarator: [\n"
-//     "    (\n"
-//     "      function_declarator declarator: (identifier) @name)\n"
-//     "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
-//     "      function_declarator declarator: (identifier) @name))\n"
-//     "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
-//     "      function_declarator declarator: (identifier) @name)))\n"
-//     "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
-//     "      function_declarator declarator: (identifier) @name))))\n"
-//     "  ]\n"
-//     "  ) @definition.function\n"
-//     "\n";
-
-//   // printf("k_queryStr: %s\n", k_queryStr);
-
-//   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-//   QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
-
-
-//   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
-//   {
-//     if (
-//       HashMap__contains(cursor->captureMap, "definition.function") //&&
-//       // HashMap__contains(cursor->captureMap, "name")
-//     ) {
-//       // NodeData* mainNode = HashMap__get(cursor->captureMap, "definition.function");
-//       NodeData* nameNode = HashMap__get(cursor->captureMap, "name");
-
-//       const char* srcStr = parsedFileContent + nameNode->startPos.index;
-//       const unsigned int contentSize = nameNode->endPos.index - nameNode->startPos.index;
-
-//       char* tmpName = strndup(srcStr, contentSize);
-//       // printf(" -{FUNC-SIGN}-> {name=%s}\n", tmpName);
-
-//       // // SourceIndexer__addFuncScope(self->indexer, tmpName, mainNode->startPos, mainNode->endPos);
-//       // // TODO: is hacky
-//       // SourceIndexer__addVarRef(self->indexer, tmpName, mainNode->startPos, mainNode->endPos);
-
-//       SourceIndexer__addExportedDef(self->indexer, tmpName);
-
-//       free(tmpName);
-//     }
-//   }
-
-//   QueryMatchData__free(&newMatchData);
-//   return 0;
-// }
+const char* k_queryVarDef_str = "\n"
+  "\n"
+  "; any identifier\n"
+  "\n"
+  "(identifier) @any.identifier\n"
+  "\n";
 
 //MARK: queryVarRef
-int AnalyzedFile__queryVarRef(AnalyzedFile *self, TSQuery* query)
+int AnalyzedFile__queryVarRef(AnalyzedFile *self, SourceParser *inParser)
 {
-  // if (self->fileType == SOURCE_H) {
-  //   return 0;
-  // }
-  // const char* k_queryStr = "\n"
-  //   "\n"
-  //   "; any identifier\n"
-  //   "\n"
-  //   "(identifier) @any.identifier\n"
-  //   "\n";
-
-  // printf("k_queryStr: %s\n", k_queryStr);
-
   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-  // QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
-  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, query);
 
+  TSQuery* queryB = SourceParser__parseQuery(inParser, "queryB", k_queryVarDef_str);
+
+  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, queryB);
 
   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
   {
@@ -953,25 +486,19 @@ int AnalyzedFile__queryVarRef(AnalyzedFile *self, TSQuery* query)
   return 0;
 }
 
+const char* k_queryComptimeComments_str = "\n"
+  "\n"
+  "(comment) @comment\n"
+  "\n";
+
 //MARK: queryComptimeComments
-int AnalyzedFile__queryComptimeComments(AnalyzedFile *self, TSQuery* query)
+int AnalyzedFile__queryComptimeComments(AnalyzedFile *self, SourceParser *inParser)
 {
-  if (self->fileType != SOURCE_LC) {
+  if (self->fileType != SOURCE_LC)
+  {
     // printf(" IS NOT A LC FILE -> {COMPTIME-COMMENt}\n");
     return 0;
   }
-
-  // printf(" IS A LC FILE -> {COMPTIME-COMMENt}\n");
-
-  // const char* k_queryStr = "\n"
-  //   "\n"
-  //   // "; example -> ///comptime-lazy-c: \"text-replace\" \"HeapArena<int>\" \"HeapArena__int\"\n"
-  //   // "\n"
-  //   // "((comment) @comment.comptime (#match? @comment.comptime \"^///\\s*?comptime-lazy-c\\s*?\\:\\s*?.*$\"))\n"
-  //   // "(comment) @comment.comptime\n"
-  //   // "(comptime_comment) @comment.comptime\n"
-  //   "(comment) @comment\n"
-  //   "\n";
 
   const char* k_patternStr = "///comptime-lazy-c:";
   const unsigned int k_patternLen = strlen(k_patternStr);
@@ -979,8 +506,10 @@ int AnalyzedFile__queryComptimeComments(AnalyzedFile *self, TSQuery* query)
   // printf("k_queryStr: %s\n", k_queryStr);
 
   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-  // QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, k_queryStr, strlen(k_queryStr));
-  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, query);
+
+  TSQuery* queryC = SourceParser__parseQuery(inParser, "queryC", k_queryComptimeComments_str);
+
+  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, queryC);
 
   for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
   {
@@ -1055,9 +584,11 @@ int AnalyzedFile__queryComptimeComments(AnalyzedFile *self, TSQuery* query)
 
       // printf(" -> arg1=%s\n", tmpArg1Str);
 
+      StringData newData = String__replaceAll2(tmpArg1Str, "*", "");
+
       if (
-        strcmp(tmpArg1Str, "int") != 0 &&
-        strcmp(tmpArg1Str, "float") != 0
+        strcmp(newData.data, "int") != 0 &&
+        strcmp(newData.data, "float") != 0
       ) {
 
         // printf("       -{RESOLVE-INCLUDE}-> %s\n", tmpArg1Str);
@@ -1065,12 +596,12 @@ int AnalyzedFile__queryComptimeComments(AnalyzedFile *self, TSQuery* query)
         SourceIndexer__addComptimeTypeToResolve(self->indexer, tmpArg1Str);
       }
 
+      free(newData.data);
       free(tmpArg1Str);
     }
     // else if (strcmp(tmpCmdStr, "resolve-type") == 0)
     // {
     //   // printf("       -{RESOLVE-TYPE}-\n");
-
     // }
 
     free(tmpCmdStr);

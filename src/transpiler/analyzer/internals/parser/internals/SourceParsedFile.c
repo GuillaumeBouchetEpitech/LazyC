@@ -105,31 +105,8 @@ NodePos SourceParsedFile__getEndPos(SourceParsedFile *self)
 
 static QueryMatchData *_QueryMatchData_create(TSQuery *inQuery, TSQueryMatch *inMatch);
 
-// QueryMatchData *SourceParsedFile__query(const SourceParsedFile *inParsedFile, const char *inQueryData, unsigned int inQueryLength)
 QueryMatchData *SourceParsedFile__query(const SourceParsedFile *inParsedFile, TSQuery *inQuery)
 {
-
-
-  // printf("   ---> query\n");
-  // StopWatch stopWatch = StopWatch__create();
-  // StopWatch__start(&stopWatch);
-
-  // uint32_t err_offset;
-  // TSQueryError err_type;
-  // TSQuery *query = ts_query_new(tree_sitter_lazyc(), inQueryData, (uint32_t)inQueryLength, &err_offset, &err_type);
-  // if (!query)
-  // {
-  //   fprintf(stderr, "bad query (type %d) at byte %u\n", err_type, err_offset);
-  //   panic("bad tree-sitter query");
-  //   // return NULL;
-  // }
-
-  // StopWatch__stop(&stopWatch);
-  // const double timeInSec = StopWatch__getTime(&stopWatch);
-  // printf("     ---> %lf sec\n", timeInSec);
-  // StopWatch__free(&stopWatch);
-
-
   TSQueryCursor *cursor = ts_query_cursor_new();
   TSNode rootNode = ts_tree_root_node(inParsedFile->pTree);
   ts_query_cursor_exec(cursor, inQuery, rootNode);
@@ -139,11 +116,6 @@ QueryMatchData *SourceParsedFile__query(const SourceParsedFile *inParsedFile, TS
   TSQueryMatch match;
   while (ts_query_cursor_next_match(cursor, &match))
   {
-    // printf("-> cursor.id:%d\n", match.id);
-    // printf("-> %s\n", ts_node_string(match.captures->node));
-    // int nameLen;
-    // printf("---> %s\n", ts_query_capture_name_for_id(query, match.id, &nameLen));
-
     QueryMatchData *newMatchData = _QueryMatchData_create(inQuery, &match);
 
     if (!rootMatch)
@@ -158,7 +130,6 @@ QueryMatchData *SourceParsedFile__query(const SourceParsedFile *inParsedFile, TS
   }
 
   ts_query_cursor_delete(cursor);
-  // ts_query_delete(inQuery);
 
   return rootMatch;
 }
@@ -224,20 +195,12 @@ static QueryMatchData *_QueryMatchData_create(TSQuery *inQuery, TSQueryMatch *in
       return NULL;
     }
 
-    // printf(" -> cap_name[%d]: %s\n", nameLen, cap_name);
-
     // duplicate the capture name
     currNode->captureName.len = nameLen;
     currNode->captureName.data = strndup(cap_name, nameLen);
     if (!currNode->captureName.data) {
       return NULL;
     }
-
-    // printf(" -> cap_name[%d]: %s\n", nameLen, currNode.captureName.data);
-
-    // char *cap_name = ts_node_string(capture.node);
-    // currNode.captureName.data = strdup(cap_name);
-    // currNode.captureName.len = strlen(cap_name);
 
     // record the node in the hasmap
     if (HashMap__set(newMatchData->captureMap, currNode->captureName.data, currNode) < 0) {

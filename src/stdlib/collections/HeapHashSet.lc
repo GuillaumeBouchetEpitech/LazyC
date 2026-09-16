@@ -1,0 +1,61 @@
+
+
+// #include "./HeapHashMap.lc"
+
+// #include <stdlib.h>
+
+// export struct HeapHashSet
+// {
+//   HeapHashMap<int> internalMap;
+// };
+
+// export HeapHashSet HeapHashSet__preAllocate(unsigned int capacity)
+// {
+//   HeapHashSet self;
+//   self.internalMap = HeapHashMap<int>::preAllocate(capacity);
+//   return self;
+// }
+
+// export void HeapHashSet__free(HeapHashSet *self)
+// {
+//   if (!self)
+//   {
+//     return;
+//   }
+//   HeapHashMap<int>::free(&self->internalMap);
+// }
+
+// export void HeapHashSet__clear(HeapHashSet* self)
+// {
+//   HeapHashMap<int>::clear(self->internalMap);
+// }
+
+// export int HeapHashSet__set(HeapHashSet *self, const char *key)
+// {
+//   return HeapHashMap<int>::set(self->internalMap, key, 1);
+// }
+
+// export int HeapHashSet__contains(const HeapHashSet *self, const char *key)
+// {
+//   return HeapHashMap<int>::contains(self->internalMap, key);
+// }
+
+// export int HeapHashSet__remove(HeapHashSet *self, const char *key)
+// {
+//   return HeapHashMap<int>::remove(self->internalMap, key);
+// }
+
+// export unsigned int HeapHashSet__get_totalBuckets(const HeapHashSet *self)
+// {
+//   return HeapHashMap<int>::get_totalBuckets(self->internalMap);
+// }
+
+// export unsigned int HeapHashSet__get_totalItems(const HeapHashSet *self)
+// {
+//   return HeapHashMap<int>::get_totalItems(self->internalMap);
+// }
+
+// export char **HeapHashSet__get_allKeys(const HeapHashSet *self, unsigned int *totalKeys)
+// {
+//   return HeapHashMap<int>::get_allKeys(self->internalMap, totalKeys);
+// }

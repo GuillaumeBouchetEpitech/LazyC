@@ -1,0 +1,130 @@
+
+#include "../HeapHashMap.lc"
+
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+
+//
+//
+//
+
+//
+//
+//
+
+export struct TestStruct {
+  int value;
+};
+
+static void HeapHashMap_can_create_pre_allocated_int() {
+  HeapHashMap<int> testHeapHashMap = HeapHashMap<int>::preAllocate(32);
+  assert(testHeapHashMap.totalItems == 0);
+  assert(testHeapHashMap.totalBuckets == 32);
+  assert(testHeapHashMap.allBuckets != NULL);
+  HeapHashMap<int>::free(&testHeapHashMap);
+  assert(testHeapHashMap.totalItems == 0);
+  assert(testHeapHashMap.totalBuckets == 0);
+  assert(testHeapHashMap.allBuckets == NULL);
+}
+
+static void HeapHashMap_can_create_pre_allocated_int_pointer() {
+  HeapHashMap<int*> testHeapHashMap = HeapHashMap<int*>::preAllocate(32);
+  assert(testHeapHashMap.totalItems == 0);
+  assert(testHeapHashMap.totalBuckets == 32);
+  assert(testHeapHashMap.allBuckets != NULL);
+  HeapHashMap<int*>::free(&testHeapHashMap);
+  assert(testHeapHashMap.totalItems == 0);
+  assert(testHeapHashMap.totalBuckets == 0);
+  assert(testHeapHashMap.allBuckets == NULL);
+}
+
+static void HeapHashMap_can_create_pre_allocated_struct() {
+  HeapHashMap<TestStruct> testHeapHashMap = HeapHashMap<TestStruct>::preAllocate(32);
+  assert(testHeapHashMap.totalItems == 0);
+  assert(testHeapHashMap.totalBuckets == 32);
+  assert(testHeapHashMap.allBuckets != NULL);
+
+  {
+    TestStruct test1;
+    test1.value = 1;
+    HeapHashMap<TestStruct>::set(&testHeapHashMap, "test1", test1);
+  }
+
+  assert(testHeapHashMap.totalItems == 1);
+  assert(testHeapHashMap.totalBuckets == 32);
+  assert(testHeapHashMap.allBuckets != NULL);
+
+  {
+    assert(HeapHashMap<TestStruct>::contains(&testHeapHashMap, "test1") == 1);
+    TestStruct* test1 = HeapHashMap<TestStruct>::get(&testHeapHashMap, "test1");
+    assert(test1 != NULL);
+    assert(test1->value == 1);
+  }
+
+  assert(testHeapHashMap.totalItems == 1);
+  assert(testHeapHashMap.totalBuckets == 32);
+  assert(testHeapHashMap.allBuckets != NULL);
+
+  {
+    HeapHashMap<TestStruct>::clear(&testHeapHashMap);
+  }
+
+  assert(testHeapHashMap.totalItems == 0);
+  assert(testHeapHashMap.totalBuckets == 32);
+  assert(testHeapHashMap.allBuckets != NULL);
+
+  {
+    assert(HeapHashMap<TestStruct>::contains(&testHeapHashMap, "test1") == 0);
+    TestStruct* test1 = HeapHashMap<TestStruct>::get(&testHeapHashMap, "test1");
+    assert(test1 == NULL);
+  }
+
+  HeapHashMap<TestStruct>::free(&testHeapHashMap);
+  assert(testHeapHashMap.totalItems == 0);
+  assert(testHeapHashMap.totalBuckets == 0);
+  assert(testHeapHashMap.allBuckets == NULL);
+}
+
+//
+//
+//
+
+//
+//
+//
+
+static int tests_run = 0;
+static int tests_passed = 0;
+
+#define TEST(name) \
+  do { \
+    printf("  TEST: %s ... ", #name); \
+    tests_run++; \
+  } while(0)
+
+#define PASS() \
+  do { \
+    tests_passed++; \
+    printf("PASS\n"); \
+  } while(0)
+
+#define RUN_TEST(test_func) \
+  do { \
+    TEST(test_func); \
+    test_func(); \
+    PASS(); \
+  } while(0)
+
+export void HeapHashMap_tests()
+{
+  printf("=== HeapHashMap_tests ===\n\n");
+
+  RUN_TEST(HeapHashMap_can_create_pre_allocated_int);
+  RUN_TEST(HeapHashMap_can_create_pre_allocated_int_pointer);
+  RUN_TEST(HeapHashMap_can_create_pre_allocated_struct);
+
+  printf("\n--- %d/%d tests passed ---\n\n", tests_passed, tests_run);
+}

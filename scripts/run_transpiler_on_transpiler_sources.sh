@@ -68,7 +68,8 @@ find ./src/ -name .generated -type d -type d -exec bash -c ' rm -rf "{}" ' \;
 #   "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
 #   || exit 1
 
-./_tmp/c-transpiler/bin/exec \
+# ./_tmp/c-transpiler/bin/exec \
+./_tmp/v0.0.2-dirty-100x-faster-prototype/output/bin/exec \
   "--base-dir=${PWD}/src/" \
   "--input-file=${PWD}/src/main.c" \
   "--output-dir=${PWD}/output" \

@@ -50,8 +50,7 @@ typedef struct SourceIndexer
 
   ComptimeFeatures comptimeFeatures;
 
-  // PointerHeapArray<SourceScope>
-  PointerHeapArray *allScopes;
+  HeapArray<SourceScope*> allScopes;
 
   SourceScope *rootScope;
 
@@ -66,7 +65,6 @@ typedef struct SourceIndexer
   HashSet *allComptimeFuncDefSet;
 
   HashSet *allExportedDefsSet;
-
 }
 SourceIndexer;
 
@@ -85,7 +83,7 @@ SourceIndexer *SourceIndexer__create(NodePos inStartPos, NodePos inEndPos)
   newIndexer->comptimeFeatures.typesToResolve = HashSet__preAllocate(32);
   newIndexer->comptimeFeatures.textsToReplace = HashMap__preAllocate(32);
 
-  newIndexer->allScopes = PointerHeapArray__preAllocate(32);
+  newIndexer->allScopes = HeapArray<SourceScope*>::preAllocated(32);
   newIndexer->rootScope = SourceScope__create(inStartPos, inEndPos);
   newIndexer->allVarDef = HeapArray<VarDef>::preAllocated(32);
   newIndexer->allFuncCalls = HeapArray<IdentifiedRef>::preAllocated(32);
@@ -99,7 +97,6 @@ SourceIndexer *SourceIndexer__create(NodePos inStartPos, NodePos inEndPos)
 
   if (!newIndexer->importedFiles.filepathsSet ||
       !newIndexer->importedFiles.rawFilepathsSet ||
-      !newIndexer->allScopes ||
       !newIndexer->rootScope ||
       !newIndexer->allRootDefs ||
       !newIndexer->allDefs ||
@@ -112,7 +109,8 @@ SourceIndexer *SourceIndexer__create(NodePos inStartPos, NodePos inEndPos)
   }
 
   newIndexer->rootScope->scopeType = ROOT_SCOPE;
-  PointerHeapArray__pushBack(newIndexer->allScopes, newIndexer->rootScope);
+
+  HeapArray<SourceScope*>::pushBack(&newIndexer->allScopes, newIndexer->rootScope);
 
   return newIndexer;
 }
@@ -149,26 +147,15 @@ void SourceIndexer__free(SourceIndexer **self)
 
     HashMap__free(&(*self)->comptimeFeatures.textsToReplace);
   }
-  if ((*self)->allScopes)
+
   {
-    for (unsigned int ii = 0; ii < (*self)->allScopes->len; ++ii)
+    for (unsigned int ii = 0; ii < (*self)->allScopes.len; ++ii)
     {
-      SourceScope *currScope = (*self)->allScopes->data[ii];
-
-      for (unsigned int ii = 0; ii < currScope->allComptimeCalls.len; ++ii)
-      {
-        ComptimeCallRef *currVar = &currScope->allComptimeCalls.data[ii];
-        ComptimeCallRef__free(currVar);
-      }
-      for (unsigned int ii = 0; ii < currScope->allVarRefs.len; ++ii)
-      {
-        IdentifiedRef *currVar = &currScope->allVarRefs.data[ii];
-        IdentifiedRef__free(currVar);
-      }
-
+      SourceScope *currScope = (*self)->allScopes.data[ii];
       SourceScope__free(&currScope);
     }
-    PointerHeapArray__free(&(*self)->allScopes);
+
+    HeapArray<SourceScope*>::free(&(*self)->allScopes);
   }
 
   HeapArray<VarDef>::free(&(*self)->allVarDef);
@@ -258,10 +245,15 @@ unsigned int SourceIndexer__getComptimeFuncs(const SourceIndexer *self)
 int SourceIndexer__addFuncScope(SourceIndexer *self, const char *inFuncName, NodePos inStartPos, NodePos inEndPos)
 {
   SourceScope *newScope = SourceScope__create(inStartPos, inEndPos);
-  if (
-      !newScope ||
-      PointerHeapArray__pushBack(self->allScopes, newScope) != 0 ||
-      HashSet__set(self->allDefs, inFuncName) != 0 ||
+  if (!newScope)
+  {
+    SourceScope__free(&newScope);
+    return -1;
+  }
+
+  HeapArray<SourceScope*>::pushBack(&self->allScopes, newScope);
+
+  if (HashSet__set(self->allDefs, inFuncName) != 0 ||
       HashSet__set(self->allRootDefs, inFuncName) != 0)
   {
     SourceScope__free(&newScope);
@@ -276,13 +268,86 @@ int SourceIndexer__addFuncScope(SourceIndexer *self, const char *inFuncName, Nod
 int SourceIndexer__addBlockScope(SourceIndexer *self, NodePos inStartPos, NodePos inEndPos)
 {
   SourceScope *newScope = SourceScope__create(inStartPos, inEndPos);
-  if (!newScope ||
-      PointerHeapArray__pushBack(self->allScopes, newScope) != 0)
+  if (!newScope)
   {
     SourceScope__free(&newScope);
     return -1;
   }
   newScope->scopeType = BLOCK_SCOPE;
+  HeapArray<SourceScope*>::pushBack(&self->allScopes, newScope);
+  return 0;
+}
+
+// MARK: addStructScope
+int SourceIndexer__addStructScope(SourceIndexer *self, const char *inTypeName, NodePos inStartPos, NodePos inEndPos)
+{
+  SourceScope *newScope = SourceScope__create(inStartPos, inEndPos);
+  if (!newScope)
+  {
+    SourceScope__free(&newScope);
+    return -1;
+  }
+
+  newScope->scopeType = STRUCT_SCOPE;
+  if (inTypeName) {
+    newScope->funcName = strdup(inTypeName);
+  }
+
+  HeapArray<SourceScope*>::pushBack(&self->allScopes, newScope);
+  return 0;
+}
+
+int SourceIndexer__addEnumScope(SourceIndexer *self, const char *inTypeName, NodePos inStartPos, NodePos inEndPos)
+{
+  SourceScope *newScope = SourceScope__create(inStartPos, inEndPos);
+  if (!newScope)
+  {
+    SourceScope__free(&newScope);
+    return -1;
+  }
+
+  newScope->scopeType = ENUM_SCOPE;
+  if (inTypeName) {
+    newScope->funcName = strdup(inTypeName);
+  }
+
+  HeapArray<SourceScope*>::pushBack(&self->allScopes, newScope);
+  return 0;
+}
+
+int SourceIndexer__addUnionScope(SourceIndexer *self, const char *inTypeName, NodePos inStartPos, NodePos inEndPos)
+{
+  SourceScope *newScope = SourceScope__create(inStartPos, inEndPos);
+  if (!newScope)
+  {
+    SourceScope__free(&newScope);
+    return -1;
+  }
+
+  newScope->scopeType = UNION_SCOPE;
+  if (inTypeName) {
+    newScope->funcName = strdup(inTypeName);
+  }
+
+  HeapArray<SourceScope*>::pushBack(&self->allScopes, newScope);
+  return 0;
+}
+
+int SourceIndexer__addTypedefScope(SourceIndexer *self, const char *inTypeName, NodePos inStartPos, NodePos inEndPos)
+{
+  SourceScope *newScope = SourceScope__create(inStartPos, inEndPos);
+  if (!newScope)
+  {
+    SourceScope__free(&newScope);
+    return -1;
+  }
+
+  newScope->scopeType = TYPEDEF_SCOPE;
+  if (inTypeName) {
+    newScope->funcName = strdup(inTypeName);
+  }
+
+  HeapArray<SourceScope*>::pushBack(&self->allScopes, newScope);
   return 0;
 }
 
@@ -290,33 +355,38 @@ int SourceIndexer__addBlockScope(SourceIndexer *self, NodePos inStartPos, NodePo
 
 
 
+
+
+
 // MARK: findScope
-static SourceScope *_SourceIndexer__findScope(const SourceIndexer *self, const NodePos *inPos, SourceScope *inCurrScope)
+static SourceScope *_SourceIndexer__findScopeFromStartEnd(const SourceIndexer *self, const NodePos *inStartPos, const NodePos *inEndPos, SourceScope *inCurrScope)
 {
-  if (inPos->index < inCurrScope->startPos.index ||
-      inPos->index > inCurrScope->endPos.index)
-  {
+  if (!(
+    inCurrScope->startPos.index <= inStartPos->index &&
+    inEndPos->index <= inCurrScope->endPos.index
+  )) {
     // not contained
     return NULL;
   }
 
-  SourceScope *finalResult = inCurrScope;
-
-  for (unsigned int ii = 0; ii < inCurrScope->allChildrenScopes->len; ++ii)
+  for (unsigned int ii = 0; ii < inCurrScope->allChildrenScopes.len; ++ii)
   {
-
-    SourceScope *childScope = inCurrScope->allChildrenScopes->data[ii];
-    SourceScope *tmpResult = _SourceIndexer__findScope(self, inPos, childScope);
+    SourceScope *childScope = inCurrScope->allChildrenScopes.data[ii];
+    SourceScope *tmpResult = _SourceIndexer__findScopeFromStartEnd(self, inStartPos, inEndPos, childScope);
     if (tmpResult)
     {
-      finalResult = tmpResult;
-      break;
+      return tmpResult;
     }
   }
 
-  return finalResult;
+  return inCurrScope;
 }
 
+// MARK: findScope
+static SourceScope *_SourceIndexer__findScope(const SourceIndexer *self, const NodePos *inPos, SourceScope *inCurrScope)
+{
+  return _SourceIndexer__findScopeFromStartEnd(self, inPos, inPos, inCurrScope);
+}
 
 
 
@@ -324,61 +394,97 @@ static SourceScope *_SourceIndexer__findScope(const SourceIndexer *self, const N
 void SourceIndexer__computeScopesHierarchy(SourceIndexer *self)
 {
   // start at "index 1" -> since "index 0" is always used by the "root scope"
-  for (unsigned int ii = 1; ii < self->allScopes->len; ++ii)
+  for (unsigned int ii = 1; ii < self->allScopes.len; ++ii)
   {
-    SourceScope *currScope = self->allScopes->data[ii];
+    SourceScope *currScope = self->allScopes.data[ii];
 
-    for (unsigned int jj = 0; jj < self->allScopes->len; ++jj)
+    for (unsigned int jj = 0; jj < self->allScopes.len; ++jj)
     {
       if (ii == jj)
       {
         continue;
       }
 
-      SourceScope *maybeParentScope = self->allScopes->data[jj];
+      SourceScope *maybeParentScope = self->allScopes.data[jj];
 
       if (// parent contains current scope?
           maybeParentScope->startPos.index <= currScope->startPos.index &&
           currScope->endPos.index <= maybeParentScope->endPos.index)
       {
         if (// no parent -> set it
-            !currScope->parentScope ||
-            // has parent -> set it if "closer" to the child
-            currScope->parentScope->startPos.index < maybeParentScope->startPos.index)
-        {
+          !currScope->parentScope ||
+          // has parent -> set it if "closer" to the child
+          (
+            currScope->parentScope->startPos.index < maybeParentScope->startPos.index // &&
+            // currScope->endPos.index <= maybeParentScope->endPos.index
+          )
+        ) {
           currScope->parentScope = maybeParentScope;
         }
       }
     }
+
+
+    if (currScope->scopeType == ROOT_SCOPE)
+    {
+      printf(" -==-> [ROOT_SCOPE]\n");
+    }
+    else if (currScope->scopeType == FUNC_SCOPE)
+    {
+      printf(" -==-> [FUNC_SCOPE]\n");
+    }
+    else if (currScope->scopeType == BLOCK_SCOPE)
+    {
+      printf(" -==-> [BLOCK_SCOPE]\n");
+    }
+    else if (currScope->scopeType == STRUCT_SCOPE)
+    {
+      printf(" -==-> [STRUCT_SCOPE]\n");
+    }
+    else if (currScope->scopeType == ENUM_SCOPE)
+    {
+      printf(" -==-> [ENUM_SCOPE]\n");
+    }
+    else if (currScope->scopeType == UNION_SCOPE)
+    {
+      printf(" -==-> [UNION_SCOPE]\n");
+    }
+    else if (currScope->scopeType == TYPEDEF_SCOPE)
+    {
+      printf(" -==-> [TYPEDEF_SCOPE]\n");
+    }
+    else
+    {
+      printf(" -==-> [????_SCOPE]\n");
+    }
+
+
+    if (currScope->parentScope == NULL)
+    {
+      panic("no parent scope found for a child scope");
+    }
+
   }
 
-  for (unsigned int ii = 1; ii < self->allScopes->len; ++ii)
+  for (unsigned int ii = 1; ii < self->allScopes.len; ++ii)
   {
-    SourceScope *currScope = self->allScopes->data[ii];
+    SourceScope *currScope = self->allScopes.data[ii];
     if (currScope->parentScope)
     {
       // push this scope as a "child scope" to their newly found "parent scope"
-      PointerHeapArray__pushBack(currScope->parentScope->allChildrenScopes, currScope);
+      HeapArray<SourceScope*>::pushBack(&currScope->parentScope->allChildrenScopes, currScope);
     }
   }
 
   {
-    // // PointerHeapArray<VarDef>
-    // PointerHeapArray *allVarDef;
-    // // PointerHeapArray<IdentifiedRef>
-    // PointerHeapArray *allFuncCalls;
-    // // PointerHeapArray<ComptimeCallRef>
-    // PointerHeapArray *allComptimeCalls;
-
     for (unsigned int ii = 0; ii < self->allVarDef.len; ++ii)
     {
       VarDef* currVarDef = &self->allVarDef.data[ii];
-      currVarDef->parentScope = _SourceIndexer__findScope(self, &currVarDef->startPos, self->rootScope);
+      // currVarDef->parentScope = _SourceIndexer__findScope(self, &currVarDef->startPos, self->rootScope);
+      currVarDef->parentScope = _SourceIndexer__findScopeFromStartEnd(self, &currVarDef->startPos, &currVarDef->endPos, self->rootScope);
 
       // printf(" -{VARDEF[%d]}-> %s (%s)\n", ii, currVarDef->varName, currVarDef->typeName);
 
-      // PointerHeapArray__pushBack(currVarDef->parentScope->allVarDef, currVarDef);
-      // currVarDef->parentScope->allVarDef->pushBack(*currVarDef);
       HeapArray<VarDef>::pushBackRef(&currVarDef->parentScope->allVarDef, currVarDef);
     }
 
@@ -491,10 +597,6 @@ int SourceIndexer__addVarRef(SourceIndexer *self, const char *inVarRefName, Node
 //MARK: exportedDef
 int SourceIndexer__addExportedDef(SourceIndexer *self, const char *inVarRefName)
 {
-  // if (HashSet__contains(self->allExportedDefsSet, inVarRefName))
-  // {
-  //   return -1;
-  // }
   if (HashSet__set(self->allExportedDefsSet, inVarRefName) != 0)
   {
     return -1;
@@ -597,15 +699,11 @@ static void _SourceIndexer__debugPrefix(StreamWriter *inStreamWriter, int inLeve
 static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, StreamWriter *inStreamWriter, int inLevel)
 {
   _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "|---");
+
   char buffer[1024];
   memset(buffer, 0, 1024);
-  // snprintf(buffer, 1024, "|---");
-  // for (int ii = 0; ii < inLevel; ++ii)
-  // {
-  //   StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-  // }
 
-  snprintf(buffer, 1024, " [L%d_C%d]->[L%d_C%d] ", currScope->startPos.row, currScope->startPos.column, currScope->endPos.row, currScope->endPos.column);
+  snprintf(buffer, 1024, " [L%02d_C%02d]->[L%02d_C%02d] ", currScope->startPos.row, currScope->startPos.column, currScope->endPos.row, currScope->endPos.column);
   StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
   if (currScope->scopeType == ROOT_SCOPE)
@@ -619,6 +717,22 @@ static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, Strea
   else if (currScope->scopeType == BLOCK_SCOPE)
   {
     snprintf(buffer, 1024, "[BLOCK_SCOPE]");
+  }
+  else if (currScope->scopeType == STRUCT_SCOPE)
+  {
+    snprintf(buffer, 1024, "[STRUCT_SCOPE]");
+  }
+  else if (currScope->scopeType == ENUM_SCOPE)
+  {
+    snprintf(buffer, 1024, "[ENUM_SCOPE]");
+  }
+  else if (currScope->scopeType == UNION_SCOPE)
+  {
+    snprintf(buffer, 1024, "[UNION_SCOPE]");
+  }
+  else if (currScope->scopeType == TYPEDEF_SCOPE)
+  {
+    snprintf(buffer, 1024, "[TYPEDEF_SCOPE]");
   }
   else
   {
@@ -640,16 +754,11 @@ static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, Strea
     VarDef *currVar = &currScope->allVarDef.data[ii];
 
     _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "=-=-");
-    // snprintf(buffer, 1024, "=-=-");
-    // for (int ii = 0; ii < inLevel; ++ii)
-    // {
-    //   StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-    // }
 
     snprintf(buffer, 1024, " =>");
     StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
-    snprintf(buffer, 1024, " [L%d_C%d]->[L%d_C%d] ", currVar->startPos.row, currVar->startPos.column, currVar->endPos.row, currVar->endPos.column);
+    snprintf(buffer, 1024, " [L%02d_C%02d]->[L%02d_C%02d] ", currVar->startPos.row, currVar->startPos.column, currVar->endPos.row, currVar->endPos.column);
     StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
     snprintf(buffer, 1024, " -> VarDef: type=\"%s\", ptrLvl=\"%d\", name=\"%s\"", currVar->typeName, currVar->pointerLevel, currVar->varName);
@@ -664,15 +773,11 @@ static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, Strea
     IdentifiedRef *currId = &currScope->allFuncCalls.data[ii];
 
     _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "=-=-");
-    // snprintf(buffer, 1024, "=-=-");
-    // for (int ii = 0; ii < inLevel; ++ii)
-    // {
-    //   StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-    // }
+
     snprintf(buffer, 1024, " =>");
     StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
-    snprintf(buffer, 1024, " [L%d_C%d]->[L%d_C%d] ", currId->startPos.row, currId->startPos.column, currId->endPos.row, currId->endPos.column);
+    snprintf(buffer, 1024, " [L%02d_C%02d]->[L%02d_C%02d] ", currId->startPos.row, currId->startPos.column, currId->endPos.row, currId->endPos.column);
     StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
     snprintf(buffer, 1024, " -> FunCall: name=\"%s\"", currId->varName);
@@ -687,15 +792,11 @@ static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, Strea
     ComptimeCallRef *currCall = &currScope->allComptimeCalls.data[ii];
 
     _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "=-=-");
-    // snprintf(buffer, 1024, "=-=-");
-    // for (int ii = 0; ii < inLevel; ++ii)
-    // {
-    //   StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-    // }
+
     snprintf(buffer, 1024, " =>");
     StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
-    snprintf(buffer, 1024, " [L%d_C%d]->[L%d_C%d] ", currCall->startPos.row, currCall->startPos.column, currCall->endPos.row, currCall->endPos.column);
+    snprintf(buffer, 1024, " [L%02d_C%02d]->[L%02d_C%02d] ", currCall->startPos.row, currCall->startPos.column, currCall->endPos.row, currCall->endPos.column);
     StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
     snprintf(buffer, 1024, " -> ComptimeCall: name=\"%s\", args=\"%s\"", currCall->varName, currCall->argsValue);
@@ -718,15 +819,11 @@ static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, Strea
     IdentifiedRef *currId = &currScope->allVarRefs.data[ii];
 
     _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "=-=-");
-    // snprintf(buffer, 1024, "=-=-");
-    // for (int ii = 0; ii < inLevel; ++ii)
-    // {
-    //   StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-    // }
+
     snprintf(buffer, 1024, " =>");
     StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
-    snprintf(buffer, 1024, " [L%d_C%d]->[L%d_C%d] ", currId->startPos.row, currId->startPos.column, currId->endPos.row, currId->endPos.column);
+    snprintf(buffer, 1024, " [L%02d_C%02d]->[L%02d_C%02d] ", currId->startPos.row, currId->startPos.column, currId->endPos.row, currId->endPos.column);
     StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
     snprintf(buffer, 1024, " -> VarRef: name=\"%s\"", currId->varName);
@@ -738,9 +835,9 @@ static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, Strea
 
   // StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
 
-  for (unsigned int ii = 0; ii < currScope->allChildrenScopes->len; ++ii)
+  for (unsigned int ii = 0; ii < currScope->allChildrenScopes.len; ++ii)
   {
-    SourceScope *childScope = currScope->allChildrenScopes->data[ii];
+    SourceScope *childScope = currScope->allChildrenScopes.data[ii];
     _SourceIndexer__debugTraverseScopeTree(childScope, inStreamWriter, inLevel + 1);
   }
 }
@@ -835,10 +932,10 @@ void SourceIndexer__debugScopeTree(SourceIndexer *self, const char* inBaseDir, S
 
 int SourceIndexer__hasMainFunction(const SourceIndexer *self)
 {
-  for (unsigned int ii = 0; ii < self->rootScope->allChildrenScopes->len; ++ii)
+  for (unsigned int ii = 0; ii < self->rootScope->allChildrenScopes.len; ++ii)
   {
-    const SourceScope *childScope = self->rootScope->allChildrenScopes->data[ii];
-    if (strcmp(childScope->funcName, "main") == 0)
+    const SourceScope *childScope = self->rootScope->allChildrenScopes.data[ii];
+    if (childScope->funcName && strcmp(childScope->funcName, "main") == 0)
     {
       return 1;
     }

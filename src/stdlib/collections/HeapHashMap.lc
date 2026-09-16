@@ -1,0 +1,328 @@
+
+
+#include "stdlib/strings/replaceAll2.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+export comptime void HeapHashMap(const char* inType)
+{
+  const char* k_str = ```
+
+///comptime-lazy-c: "text-replace" "HeapHashMap<{RAW_TYPE}>" "HeapHashMap__{SAFE_TYPE}"
+///comptime-lazy-c: "resolve-includes" "{PTRLESS_TYPE}"
+
+#include "stdlib/core/panic.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <memory.h>
+#include <stdint.h>
+
+export typedef struct HeapHashMapNode__{SAFE_TYPE}
+{
+  char *key;
+  {RAW_TYPE} value;
+  struct HeapHashMapNode__{SAFE_TYPE} *next;
+}
+HeapHashMapNode__{SAFE_TYPE};
+
+static void _HeapHashMapNode__{SAFE_TYPE}__free(HeapHashMapNode__{SAFE_TYPE} *node)
+{
+  free(node->key);
+  free(node);
+}
+
+export typedef struct HeapHashMap__{SAFE_TYPE}__EntryItem
+{
+  char *key;
+  {RAW_TYPE} *value;
+}
+HeapHashMap__{SAFE_TYPE}__EntryItem;
+
+export typedef struct HeapHashMap__{SAFE_TYPE}
+{
+  HeapHashMapNode__{SAFE_TYPE} **allBuckets;
+  unsigned int totalBuckets;
+  unsigned int totalItems;
+} HeapHashMap__{SAFE_TYPE};
+
+static uint64_t _hash_key(const char *key)
+{
+  uint64_t hashVal = 14695981039346656037UL;
+  while (*key)
+  {
+    hashVal ^= (unsigned char)*key++;
+    hashVal *= 1099511628211UL;
+  }
+  return hashVal;
+}
+
+static unsigned int _bucket_index(const HeapHashMap__{SAFE_TYPE} *self, const char *key)
+{
+  return (unsigned int)(_hash_key(key) % self->totalBuckets);
+}
+
+static int _buckets_grow(HeapHashMap__{SAFE_TYPE} *self)
+{
+  unsigned int nextCapacity = self->totalBuckets * 2;
+  HeapHashMapNode__{SAFE_TYPE} **nextBuckets = calloc(nextCapacity, sizeof(HeapHashMapNode__{SAFE_TYPE} *));
+  if (nextBuckets == NULL)
+  {
+    return -1;
+  }
+  for (unsigned int ii = 0; ii < self->totalBuckets; ++ii)
+  {
+    HeapHashMapNode__{SAFE_TYPE} *node = self->allBuckets[ii];
+    while (node != NULL)
+    {
+      HeapHashMapNode__{SAFE_TYPE} *next = node->next;
+      unsigned int idx = (unsigned int)(_hash_key(node->key) % nextCapacity);
+      node->next = nextBuckets[idx];
+      nextBuckets[idx] = node;
+      node = next;
+    }
+  }
+  free(self->allBuckets);
+  self->allBuckets = nextBuckets;
+  self->totalBuckets = nextCapacity;
+  return 0;
+}
+
+static HeapHashMapNode__{SAFE_TYPE} *_find_node(const HeapHashMap__{SAFE_TYPE} *self, const char *key)
+{
+  unsigned int idx = _bucket_index(self, key);
+  for (HeapHashMapNode__{SAFE_TYPE} *node = self->allBuckets[idx]; node != NULL; node = node->next)
+  {
+    if (strcmp(node->key, key) == 0)
+    {
+      return node;
+    }
+  }
+  return NULL;
+}
+
+
+
+
+
+
+///MARK: preAllocate
+export HeapHashMap__{SAFE_TYPE} HeapHashMap__{SAFE_TYPE}__preAllocate(unsigned int capacity)
+{
+  HeapHashMap__{SAFE_TYPE} self;
+  memset(&self, 0, sizeof(HeapHashMap__{SAFE_TYPE}));
+
+  self.totalBuckets = capacity < 32 ? 32 : capacity;
+  self.allBuckets = calloc(self.totalBuckets, sizeof(HeapHashMapNode__{SAFE_TYPE} *));
+  if (self.allBuckets == NULL)
+  {
+    // free(map);
+    // return NULL;
+    panic("OOM?");
+  }
+  return self;
+}
+
+
+
+///MARK: free
+export void HeapHashMap__{SAFE_TYPE}__free(HeapHashMap__{SAFE_TYPE}* self)
+{
+  if (!self || !self->allBuckets)
+  {
+    return;
+  }
+  for (unsigned int ii = 0; ii < self->totalBuckets; ++ii)
+  {
+    HeapHashMapNode__{SAFE_TYPE} *node = self->allBuckets[ii];
+    while (node != NULL)
+    {
+      HeapHashMapNode__{SAFE_TYPE} *next = node->next;
+      _HeapHashMapNode__{SAFE_TYPE}__free(node);
+      node = next;
+    }
+  }
+
+  free(self->allBuckets);
+  memset(self, 0, sizeof(HeapHashMap__{SAFE_TYPE}));
+}
+
+///MARK: clear
+export void HeapHashMap__{SAFE_TYPE}__clear(HeapHashMap__{SAFE_TYPE} *self)
+{
+  if (self->totalItems == 0)
+  {
+    return;
+  }
+
+  for (unsigned int ii = 0; ii < self->totalBuckets; ++ii)
+  {
+    HeapHashMapNode__{SAFE_TYPE} *node = self->allBuckets[ii];
+    while (node != NULL)
+    {
+      HeapHashMapNode__{SAFE_TYPE} *next = node->next;
+      _HeapHashMapNode__{SAFE_TYPE}__free(node);
+      node = next;
+    }
+    self->allBuckets[ii] = NULL;
+  }
+  self->totalItems = 0;
+}
+
+///MARK: set
+export int HeapHashMap__{SAFE_TYPE}__set(HeapHashMap__{SAFE_TYPE} *self, const char *key, {RAW_TYPE} inValue)
+{
+  HeapHashMapNode__{SAFE_TYPE} *existing = _find_node(self, key);
+  if (existing != NULL)
+  {
+    // replace existing value
+    existing->value = inValue;
+    return 0;
+  }
+  HeapHashMapNode__{SAFE_TYPE} *newNode = calloc(1, sizeof(HeapHashMapNode__{SAFE_TYPE}));
+  if (newNode == NULL)
+  {
+    return -1;
+  }
+  newNode->key = strdup(key);
+  if (!newNode->key)
+  {
+    free(newNode);
+    return -1;
+  }
+  newNode->value = inValue;
+  const unsigned int idx = _bucket_index(self, key);
+  // insert new node as the "head node" of the bucket
+  newNode->next = self->allBuckets[idx];
+  self->allBuckets[idx] = newNode;
+  self->totalItems++;
+  // check if the buckets memory need to grow
+  if (self->totalItems * 4 >= self->totalBuckets * 3)
+  {
+    if (_buckets_grow(self) < 0)
+    {
+      return -1;
+    }
+  }
+  return 0;
+}
+
+///MARK: get
+export {RAW_TYPE} *HeapHashMap__{SAFE_TYPE}__get(const HeapHashMap__{SAFE_TYPE} *self, const char *key)
+{
+  HeapHashMapNode__{SAFE_TYPE} *node = _find_node(self, key);
+  return node == NULL ? NULL : &node->value;
+}
+
+///MARK: contains
+export int HeapHashMap__{SAFE_TYPE}__contains(const HeapHashMap__{SAFE_TYPE} *self, const char *key)
+{
+  return _find_node(self, key) != NULL ? 1 : 0;
+}
+
+///MARK: remove
+export int HeapHashMap__{SAFE_TYPE}__remove(HeapHashMap__{SAFE_TYPE} *self, const char *key)
+{
+  unsigned int idx = _bucket_index(self, key);
+  HeapHashMapNode__{SAFE_TYPE} **link = &self->allBuckets[idx];
+  while (*link != NULL)
+  {
+    if (strcmp((*link)->key, key) == 0)
+    {
+      HeapHashMapNode__{SAFE_TYPE} *node = *link;
+      *link = node->next;
+      _HeapHashMapNode__{SAFE_TYPE}__free(node);
+      self->totalItems--;
+      return 1;
+    }
+    link = &(*link)->next;
+  }
+  return 0;
+}
+
+
+///MARK: get_allKeys
+export char **HeapHashMap__{SAFE_TYPE}__get_allKeys(const HeapHashMap__{SAFE_TYPE} *self, unsigned int *totalKeys)
+{
+  // is 1 element larger, extra element has the NULL value
+  char **allKeys = calloc(self->totalItems + 1, sizeof(char *));
+  if (!allKeys)
+  {
+    return NULL;
+  }
+
+  if (totalKeys)
+  {
+    *totalKeys = self->totalItems;
+  }
+
+  unsigned int currIndex = 0;
+  for (unsigned int ii = 0; ii < self->totalBuckets; ++ii)
+  {
+    HeapHashMapNode__{SAFE_TYPE} *cursor = self->allBuckets[ii];
+    while (cursor != NULL)
+    {
+      allKeys[currIndex] = cursor->key;
+      currIndex += 1;
+      cursor = cursor->next;
+    }
+  }
+
+  return allKeys;
+}
+
+///MARK: get_allItems
+export HeapHashMap__{SAFE_TYPE}__EntryItem* HeapHashMap__{SAFE_TYPE}__get_allItems(const HeapHashMap__{SAFE_TYPE}* self, unsigned int* totalItems)
+{
+  // is 1 element larger, extra element has the NULL value
+  HeapHashMap__{SAFE_TYPE}__EntryItem *allItems = calloc(self->totalItems + 1, sizeof(HeapHashMap__{SAFE_TYPE}__EntryItem));
+  if (!allItems)
+  {
+    return NULL;
+  }
+
+  if (totalItems)
+  {
+    *totalItems = self->totalItems;
+  }
+
+  unsigned int currIndex = 0;
+  for (unsigned int ii = 0; ii < self->totalBuckets; ++ii)
+  {
+    HeapHashMapNode__{SAFE_TYPE} *cursor = self->allBuckets[ii];
+    while (cursor != NULL)
+    {
+      allItems[currIndex].key = cursor->key;
+      allItems[currIndex].value = &cursor->value;
+      currIndex += 1;
+      cursor = cursor->next;
+    }
+  }
+
+  return allItems;
+}
+
+
+
+```;
+
+  // unsigned int cleanLineLen = strlen(k_str) * 2;
+  // char* cleanLineStr = calloc(cleanLineLen, sizeof(char));
+
+  StringData safeType = String__replaceAll2(inType, "*", "Ptr");
+  StringData pointerLessType = String__replaceAll2(inType, "*", "");
+
+  StringData newDataA = String__replaceAll2(k_str, "{SAFE_TYPE}", safeType.data);
+  StringData newDataB = String__replaceAll2(newDataA.data, "{RAW_TYPE}", inType);
+  StringData newDataC = String__replaceAll2(newDataB.data, "{PTRLESS_TYPE}", pointerLessType.data);
+
+  printf("%s\n", newDataC.data);
+
+  free(newDataC.data);
+  free(newDataB.data);
+  free(newDataA.data);
+  free(pointerLessType.data);
+  free(safeType.data);
+}

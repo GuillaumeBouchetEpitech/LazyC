@@ -48,6 +48,7 @@ static void Transpiler_can_transpile_a_project()
   // const int result = Transpiler__applyDebug(transpiler);
   // assert(result == 0);
 
+  Transpiler__applyDebug(transpiler);
   Transpiler__free(&transpiler);
   assert(transpiler == NULL);
 
@@ -84,6 +85,7 @@ static void Transpiler_can_transpile_a_C_file_that_include_a_LC_file()
   // const int result = Transpiler__applyDebug(transpiler);
   // assert(result == 0);
 
+  Transpiler__applyDebug(transpiler);
   Transpiler__free(&transpiler);
   assert(transpiler == NULL);
 
@@ -112,6 +114,7 @@ static void Transpiler_can_transpile_a_comptime_file_that_use_an_includepath_inc
 
   PointerHeapArray__free(&includePaths);
 
+  Transpiler__applyDebug(transpiler);
   Transpiler__free(&transpiler);
   assert(transpiler == NULL);
 

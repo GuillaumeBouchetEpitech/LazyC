@@ -28,6 +28,10 @@ int SourceIndexer__addComptimeFunc(SourceIndexer *self, const char *inFuncName);
 
 int SourceIndexer__addFuncScope(SourceIndexer *self, const char *inFuncName, NodePos inStartPos, NodePos inEndPos);
 int SourceIndexer__addBlockScope(SourceIndexer *self, NodePos inStartPos, NodePos inEndPos);
+int SourceIndexer__addStructScope(SourceIndexer *self, const char *inTypeName, NodePos inStartPos, NodePos inEndPos);
+int SourceIndexer__addEnumScope(SourceIndexer *self, const char *inTypeName, NodePos inStartPos, NodePos inEndPos);
+int SourceIndexer__addUnionScope(SourceIndexer *self, const char *inTypeName, NodePos inStartPos, NodePos inEndPos);
+int SourceIndexer__addTypedefScope(SourceIndexer *self, const char *inTypeName, NodePos inStartPos, NodePos inEndPos);
 void SourceIndexer__computeScopesHierarchy(SourceIndexer *self);
 
 int SourceIndexer__addVarDecl(SourceIndexer *self, const char *inVarName, const char *inVarType, int inPtrLvl, NodePos inStartPos, NodePos inEndPos);

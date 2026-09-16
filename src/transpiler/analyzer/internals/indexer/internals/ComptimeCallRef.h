@@ -11,14 +11,12 @@ typedef struct ComptimeCallRef
   struct SourceScope *parentScope;
   NodePos startPos;
   NodePos endPos;
-
   char *varName;
   char *argsValue;
   HeapArray<StringData> argsList;
-
   char *signature;
-
-} ComptimeCallRef;
+}
+ComptimeCallRef;
 
 ComptimeCallRef ComptimeCallRef__create(
     NodePos inStartPos,

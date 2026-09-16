@@ -11,10 +11,9 @@ typedef struct IdentifiedRef
   SourceScope *parentScope;
   NodePos startPos;
   NodePos endPos;
-
   char *varName;
-
-} IdentifiedRef;
+}
+IdentifiedRef;
 
 IdentifiedRef IdentifiedRef__create(
     NodePos inStartPos,

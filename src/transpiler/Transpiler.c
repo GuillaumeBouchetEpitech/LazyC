@@ -257,7 +257,7 @@ static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIn
   char* generatedFolderPath = Path__join(2, self->baseDir, ".generated");
   if (!generatedFolderPath || ensureFolder(generatedFolderPath) != 0)
   {
-    panic("count not ensure the main .generated folder");
+    panic("could not ensure the main .generated folder");
     // // TODO: need a goto to a failure_return
     // free(generatedFolderPath);
     // // free(allAnalyzed);
@@ -729,51 +729,51 @@ typedef struct AnyEdit {
 } AnyEdit;
 
 
-// const char* k_queryExportedFuncDefStr = "\n"
-//   "\n"
-//   "; includes\n"
-//   "\n"
-//   "(preproc_include path: (_) @import.source) @import\n"
-//   "\n"
-//   "\n"
-//   "; functions definitions\n"
-//   "\n"
-//   "(function_definition (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
-//   "  declarator: [\n"
-//   "    (\n"
-//   "      function_declarator declarator: (identifier) @name)\n"
-//   "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
-//   "      function_declarator declarator: (identifier) @name))\n"
-//   "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
-//   "      function_declarator declarator: (identifier) @name)))\n"
-//   "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
-//   "      function_declarator declarator: (identifier) @name))))\n"
-//   "  ]\n"
-//   "  (_) @body) @definition.function\n"
-//   "\n"
-//   "\n"
-//   "; Structs, Unions, Enums, Typedefs\n"
-//   "\n"
-//   "(struct_specifier (\"export\")? @exported name: (type_identifier) @name templated_type: (type_identifier)? @templated.type (field_declaration_list) @field_declaration_list ) @definition.struct\n"
-//   "(enum_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.enum\n"
-//   "(union_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.union\n"
-//   "(type_definition (\"export\")? @exported declarator: (type_identifier) @name) @definition.typedef\n"
-//   "\n"
-//   "\n"
-//   "; Super string literals\n"
-//   "\n"
-//   "(super_string_literal) @super.string.literal\n"
-//   "\n"
-//   "; Static method call\n"
-//   "\n"
-//   "(static_call_expression (statement_identifier) @namespace (call_expression function: ((identifier) @call.name (_) @call.args))) @static.call\n"
-//   "(static_call_expression (comptime_call_expression) @namespace (call_expression function: ((identifier) @call.name (_) @call.args))) @static.call\n"
-//   "\n"
-//   "; Non-Static method call\n"
-//   "\n"
-//   "(call_expression function: (field_expression argument: (identifier) @call.caller field: (field_identifier) @call.callee) ((_) @call.args) ) @method.call\n"
-//   "\n"
-//   "\n";
+const char* k_queryExportedFuncDefStr = "\n"
+  "\n"
+  "; includes\n"
+  "\n"
+  "(preproc_include path: (_) @import.source) @import\n"
+  "\n"
+  "\n"
+  "; functions definitions\n"
+  "\n"
+  "(function_definition (\"export\")? @exported (\"comptime\")? @comptime (\"test\")? @test type: (_) @return.type\n"
+  "  declarator: [\n"
+  "    (\n"
+  "      function_declarator declarator: (identifier) @name)\n"
+  "    (pointer_declarator (\"*\") @pointer.level declarator: (\n"
+  "      function_declarator declarator: (identifier) @name))\n"
+  "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 declarator: (\n"
+  "      function_declarator declarator: (identifier) @name)))\n"
+  "    (pointer_declarator (\"*\") @pointer.level declarator: (pointer_declarator (\"*\") @pointer.level2 (pointer_declarator (\"*\") @pointer.level3 declarator: (\n"
+  "      function_declarator declarator: (identifier) @name))))\n"
+  "  ]\n"
+  "  (_) @body) @definition.function\n"
+  "\n"
+  "\n"
+  "; Structs, Unions, Enums, Typedefs\n"
+  "\n"
+  "(struct_specifier (\"export\")? @exported name: (type_identifier) @name templated_type: (type_identifier)? @templated.type (field_declaration_list) @field_declaration_list) @definition.struct\n"
+  "(enum_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.enum\n"
+  "(union_specifier (\"export\")? @exported name: (type_identifier) @name) @definition.union\n"
+  "(type_definition (\"export\")? @exported declarator: (type_identifier) @name) @definition.typedef\n"
+  "\n"
+  "\n"
+  "; Super string literals\n"
+  "\n"
+  "(super_string_literal) @super.string.literal\n"
+  "\n"
+  "; Static method call\n"
+  "\n"
+  "(static_call_expression (statement_identifier) @namespace (call_expression function: ((identifier) @call.name (_) @call.args))) @static.call\n"
+  "(static_call_expression (comptime_call_expression) @namespace (call_expression function: ((identifier) @call.name (_) @call.args))) @static.call\n"
+  "\n"
+  "; Non-Static method call\n"
+  "\n"
+  "(call_expression function: (field_expression argument: (identifier) @call.caller field: (field_identifier) @call.callee) ((_) @call.args) ) @method.call\n"
+  "\n"
+  "\n";
 
 //MARK: _processFile
 static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnalyzedFile)
@@ -833,7 +833,9 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
   PointerHeapArray* allSignatures = PointerHeapArray__preAllocate(32);
 
   SourceParser* parser = SourceAnalyzer__getParser(self->analyzer);
-  TSQuery* queryX = SourceParser__getQueryX(parser);
+
+  // TSQuery* queryX = SourceParser__getQueryX(parser);
+  TSQuery* queryX = SourceParser__parseQuery(parser, "queryX", k_queryExportedFuncDefStr);
 
   // get the exported function definitions
   // QueryMatchData* newMatchData = SourceParsedFile__query(parsedFile, k_queryExportedFuncDefStr, strlen(k_queryExportedFuncDefStr));

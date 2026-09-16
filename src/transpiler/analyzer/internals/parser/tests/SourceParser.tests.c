@@ -72,7 +72,7 @@ static void _testOneFolder(const char* inTestFilepath) {
     // debug
     char buffer[1024];
     memset(buffer, 0, 1024);
-    snprintf(buffer, 1024, "%s.test.tree", inTestFilepath);
+    snprintf(buffer, 1024, "%s.test.tree.debug", inTestFilepath);
     StreamWriter* streamWriter = StreamWriter__create(buffer);
     SourceParsedFile__debugTree(parsedFile, streamWriter);
     StreamWriter__free(&streamWriter);

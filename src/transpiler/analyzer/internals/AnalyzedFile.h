@@ -9,7 +9,8 @@ typedef enum AnalyzedFileType
   SOURCE_C,
   SOURCE_H,
   SOURCE_LC,
-} AnalyzedFileType;
+}
+AnalyzedFileType;
 
 typedef struct AnalyzedFile
 {
@@ -17,7 +18,8 @@ typedef struct AnalyzedFile
   AnalyzedFileType fileType;
   SourceParsedFile *parsedFile;
   SourceIndexer *indexer;
-} AnalyzedFile;
+}
+AnalyzedFile;
 
 
 AnalyzedFile *AnalyzedFile__create(SourceParser *inParser, const char *inFilepath);

@@ -3,10 +3,10 @@ IMPORTS (total: 2)
 -> filepath=tests-assets/lol/mdr.h
 TEXTS_TO_REPLACE (total: 0)
 TYPES_TO_RESOLVE (total: 0)
-|--- [L2_C0]->[L14_C0] [ROOT_SCOPE]
-|---|--- [L9_C0]->[L13_C1] [FUNC_SCOPE] ---> "main"
-=-=-=-=- => [L9_C9]->[L9_C17]  -> VarDef: type="int", ptrLvl="0", name="argc"
-=-=-=-=- => [L9_C19]->[L9_C30]  -> VarDef: type="char", ptrLvl="2", name="argv"
-|---|---|--- [L10_C0]->[L13_C1] [BLOCK_SCOPE]
-=-=-=-=-=-=- => [L11_C2]->[L11_C24]  -> FunCall: name="printf"
-=-=-=-=-=-=- => [L12_C9]->[L12_C21]  -> VarRef: name="EXIT_SUCCESS"
+|--- [L02_C00]->[L14_C00] [ROOT_SCOPE]
+|---|--- [L09_C00]->[L13_C01] [FUNC_SCOPE] ---> "main"
+=-=-=-=- => [L09_C09]->[L09_C17]  -> VarDef: type="int", ptrLvl="0", name="argc"
+=-=-=-=- => [L09_C19]->[L09_C30]  -> VarDef: type="char", ptrLvl="2", name="argv"
+|---|---|--- [L10_C00]->[L13_C01] [BLOCK_SCOPE]
+=-=-=-=-=-=- => [L11_C02]->[L11_C24]  -> FunCall: name="printf"
+=-=-=-=-=-=- => [L12_C09]->[L12_C21]  -> VarRef: name="EXIT_SUCCESS"

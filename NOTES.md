@@ -67,3 +67,19 @@ flowchart
   SourceParser -.-> SourceParsed
 
 ```
+
+# TYPES
+
+```mermaid
+
+flowchart
+  TypesManager("TypesManager") ==> CType["CType (union)"]
+  CType ==> PrimitiveType["PrimitiveType"]
+  CType ==> StructType["StructType"]
+  CType ==> AliasType["AliasType (typedef)"]
+
+  StructType --> CType
+
+```
+
+
