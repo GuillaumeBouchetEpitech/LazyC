@@ -135,7 +135,7 @@ static void AnalyzedFile_can_analyze_source_file__simple_C() {
 
   {
     char* sourceFilepath = Path__join(2, testFolder, "tests-assets/define-struct-union-enum-typedef.h");
-    _analyzeProject(parser, testFolder, sourceFilepath, 0);
+    _analyzeProject(parser, testFolder, sourceFilepath, 1);
     free(sourceFilepath);
   }
 

@@ -1,11 +1,35 @@
+
 IMPORTS (total: 0)
+
 TEXTS_TO_REPLACE (total: 1)
 -> LOOOOOL=LOLOLOL
-TYPES_TO_RESOLVE (total: 0)
-|--- [L01_C00]->[L12_C00] [ROOT_SCOPE]
-|---|--- [L07_C00]->[L11_C01] [FUNC_SCOPE] ---> "main"
-=-=-=-=- => [L07_C09]->[L07_C17]  -> VarDef: type="int", ptrLvl="0", name="argc"
-=-=-=-=- => [L07_C19]->[L07_C30]  -> VarDef: type="char", ptrLvl="2", name="argv"
-|---|---|--- [L08_C00]->[L11_C01] [BLOCK_SCOPE]
-=-=-=-=-=-=- => [L09_C02]->[L09_C24]  -> FunCall: name="printf"
-=-=-=-=-=-=- => [L10_C09]->[L10_C21]  -> VarRef: name="EXIT_SUCCESS"
+
+TYPES_TO_RESOLVE (total: 1)
+-> type=SomeImaginaryStruct
+
+TOTAL EXPORTED (total: 0)
+
+DEP---ALL-FUNCTIONS (total: 1)
+ -> dep-func=main
+
+DEP---ALL-TYPES (total: 0)
+
+DEP---PROVIDED-FUNCTIONS (total: 0)
+
+DEP---PROVIDED-TYPES (total: 0)
+
+DEP---REQUIRE-FUNCTIONS (total: 1)
+ -> dep-func=printf
+
+DEP---REQUIRE-TYPES (total: 2)
+ -> dep-type=char
+ -> dep-type=int
+
+ALL SCOPES
+|--- [L01_C00]->[L13_C00] [ROOT_SCOPE]
+|---|--- [L08_C00]->[L12_C01] [FUNC_SCOPE] ---> "main"
+=-=-=-=- => [L08_C09]->[L08_C17]  -> VarDef: type="int", ptrLvl="0", name="argc"
+=-=-=-=- => [L08_C19]->[L08_C30]  -> VarDef: type="char", ptrLvl="2", name="argv"
+|---|---|--- [L09_C00]->[L12_C01] [BLOCK_SCOPE]
+=-=-=-=-=-=- => [L10_C02]->[L10_C24]  -> FunCall: name="printf"
+=-=-=-=-=-=- => [L11_C09]->[L11_C21]  -> VarRef: name="EXIT_SUCCESS"

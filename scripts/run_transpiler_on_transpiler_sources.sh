@@ -156,8 +156,31 @@ find ./src -name tests-assets -type d -exec bash -c ' cp -rf "{}" "./output-seco
 find ./output-second/src/ -name output -type d
 find ./output-second/src/ -name output -type d -exec bash -c ' rm -rf "{}" ' \;
 
-./output-second/bin/exec || exit 1
+./output-second/bin/exec
 
+
+echo ""
+echo "################################"
+echo "# COPYING UNIT-TESTS ARTIFACTS #"
+echo "################################"
+echo ""
+
+pushd ./output-second || exit 1
+
+  # find ./src -name "*.debug" -type f -or -name "*.actual-matches" -type f
+  find ./src -name "*.debug" -type f -or -name "*.actual-matches" -type f -exec bash -c ' cp -rf "{}" "../{}" ' \;
+
+popd || exit 1
+
+echo ""
+echo "########"
+echo "# DONE #"
+echo "########"
+echo ""
+
+exit 0
+
+# find ./src -name tests-assets -type f # -exec bash -c ' cp -rf "{}" "./output-second/{}" ' \;
 
 
 

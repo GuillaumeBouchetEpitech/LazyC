@@ -1,18 +1,6 @@
 
 #include "./SourceIndexer.h"
 
-// #include "./internals/VarDef.h"
-#include "./internals/IdentifiedRef.h"
-#include "./internals/ComptimeCallRef.h"
-#include "./internals/SourceScope.h"
-
-#include "stdlib/core/panic.h"
-#include "stdlib/collections/HashMap.h"
-#include "stdlib/collections/HashSet.h"
-#include "stdlib/collections/PointerHeapArray.h"
-#include "stdlib/collections/HeapArray.lc"
-#include "stdlib/filesystem/StreamWriter.h"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,49 +12,6 @@
 //
 //
 //
-
-// MARK: SourceIndexer
-typedef struct ImportedFiles
-{
-  // set of path (absolute path or relative path made absolute)
-  HashSet *filepathsSet;
-  // set of path (not absolute nor relative path, very likely dependant on includepath)
-  HashSet *rawFilepathsSet;
-}
-ImportedFiles;
-
-typedef struct ComptimeFeatures
-{
-  // ex: "Vec3", etc.
-  HashSet *typesToResolve;
-  // ex: "HeapArena<int>" -> "HeapArena__int"
-  HashMap *textsToReplace;
-}
-ComptimeFeatures;
-
-typedef struct SourceIndexer
-{
-  ImportedFiles importedFiles;
-
-  ComptimeFeatures comptimeFeatures;
-
-  HeapArray<SourceScope*> allScopes;
-
-  SourceScope *rootScope;
-
-  HeapArray<VarDef> allVarDef;
-  HeapArray<IdentifiedRef> allFuncCalls;
-  HeapArray<ComptimeCallRef> allComptimeCalls;
-  HeapArray<IdentifiedRef> allVarRefs;
-
-  HashSet *allRootDefs;
-  HashSet *allDefs;
-  HashSet *allRefs;
-  HashSet *allComptimeFuncDefSet;
-
-  HashSet *allExportedDefsSet;
-}
-SourceIndexer;
 
 // MARK: create
 SourceIndexer *SourceIndexer__create(NodePos inStartPos, NodePos inEndPos)
@@ -85,28 +30,30 @@ SourceIndexer *SourceIndexer__create(NodePos inStartPos, NodePos inEndPos)
 
   newIndexer->allScopes = HeapArray<SourceScope*>::preAllocated(32);
   newIndexer->rootScope = SourceScope__create(inStartPos, inEndPos);
-  newIndexer->allVarDef = HeapArray<VarDef>::preAllocated(32);
-  newIndexer->allFuncCalls = HeapArray<IdentifiedRef>::preAllocated(32);
-  newIndexer->allComptimeCalls = HeapArray<ComptimeCallRef>::preAllocated(32);
-  newIndexer->allVarRefs = HeapArray<IdentifiedRef>::preAllocated(32);
-  newIndexer->allRootDefs = HashSet__preAllocate(32);
-  newIndexer->allDefs = HashSet__preAllocate(32);
-  newIndexer->allRefs = HashSet__preAllocate(32);
-  newIndexer->allComptimeFuncDefSet = HashSet__preAllocate(32);
+  newIndexer->allFileVarDef = HeapArray<VarDef>::preAllocated(32);
+  newIndexer->allFileFuncCalls = HeapArray<IdentifiedRef>::preAllocated(32);
+  newIndexer->allFileComptimeCalls = HeapArray<ComptimeCallRef>::preAllocated(32);
+  newIndexer->allFileVarRefs = HeapArray<IdentifiedRef>::preAllocated(32);
+  // newIndexer->allRootDefs = HashSet__preAllocate(32);
+  newIndexer->allDefIdentifiers = HashSet__preAllocate(32);
+  // newIndexer->allRefs = HashSet__preAllocate(32);
+  newIndexer->comptimeFeatures.allComptimeFuncDefSet = HashSet__preAllocate(32);
   newIndexer->allExportedDefsSet = HashSet__preAllocate(32);
 
   if (!newIndexer->importedFiles.filepathsSet ||
       !newIndexer->importedFiles.rawFilepathsSet ||
       !newIndexer->rootScope ||
-      !newIndexer->allRootDefs ||
-      !newIndexer->allDefs ||
-      !newIndexer->allRefs ||
-      !newIndexer->allComptimeFuncDefSet ||
+      // !newIndexer->allRootDefs ||
+      !newIndexer->allDefIdentifiers ||
+      // !newIndexer->allRefs ||
+      !newIndexer->comptimeFeatures.allComptimeFuncDefSet ||
       !newIndexer->allExportedDefsSet)
   {
     SourceIndexer__free(&newIndexer);
     return NULL;
   }
+
+  newIndexer->dependencies = Dependencies__create();
 
   newIndexer->rootScope->scopeType = ROOT_SCOPE;
 
@@ -122,6 +69,9 @@ void SourceIndexer__free(SourceIndexer **self)
   {
     return;
   }
+
+  Dependencies__free(&(*self)->dependencies);
+
   if ((*self)->importedFiles.filepathsSet)
   {
     HashSet__free(&(*self)->importedFiles.filepathsSet);
@@ -158,26 +108,26 @@ void SourceIndexer__free(SourceIndexer **self)
     HeapArray<SourceScope*>::free(&(*self)->allScopes);
   }
 
-  HeapArray<VarDef>::free(&(*self)->allVarDef);
-  HeapArray<IdentifiedRef>::free(&(*self)->allFuncCalls);
-  HeapArray<ComptimeCallRef>::free(&(*self)->allComptimeCalls);
-  HeapArray<IdentifiedRef>::free(&(*self)->allVarRefs);
+  HeapArray<VarDef>::free(&(*self)->allFileVarDef);
+  HeapArray<IdentifiedRef>::free(&(*self)->allFileFuncCalls);
+  HeapArray<ComptimeCallRef>::free(&(*self)->allFileComptimeCalls);
+  HeapArray<IdentifiedRef>::free(&(*self)->allFileVarRefs);
 
-  if ((*self)->allRootDefs)
+  // if ((*self)->allRootDefs)
+  // {
+  //   HashSet__free(&(*self)->allRootDefs);
+  // }
+  if ((*self)->allDefIdentifiers)
   {
-    HashSet__free(&(*self)->allRootDefs);
+    HashSet__free(&(*self)->allDefIdentifiers);
   }
-  if ((*self)->allDefs)
+  // if ((*self)->allRefs)
+  // {
+  //   HashSet__free(&(*self)->allRefs);
+  // }
+  if ((*self)->comptimeFeatures.allComptimeFuncDefSet)
   {
-    HashSet__free(&(*self)->allDefs);
-  }
-  if ((*self)->allRefs)
-  {
-    HashSet__free(&(*self)->allRefs);
-  }
-  if ((*self)->allComptimeFuncDefSet)
-  {
-    HashSet__free(&(*self)->allComptimeFuncDefSet);
+    HashSet__free(&(*self)->comptimeFeatures.allComptimeFuncDefSet);
   }
   if ((*self)->allExportedDefsSet)
   {
@@ -226,17 +176,17 @@ char **SourceIndexer__getAllRawImports(const SourceIndexer *self, unsigned int *
 // MARK: comptimeFuncs
 int SourceIndexer__addComptimeFunc(SourceIndexer *self, const char *inFuncName)
 {
-  return HashSet__set(self->allComptimeFuncDefSet, inFuncName);
+  return HashSet__set(self->comptimeFeatures.allComptimeFuncDefSet, inFuncName);
 }
 
 char **SourceIndexer__getAllComptimeFuncs(const SourceIndexer *self, unsigned int *outTotalImports)
 {
-  return HashSet__get_allKeys(self->allComptimeFuncDefSet, outTotalImports);
+  return HashSet__get_allKeys(self->comptimeFeatures.allComptimeFuncDefSet, outTotalImports);
 }
 
 unsigned int SourceIndexer__getComptimeFuncs(const SourceIndexer *self)
 {
-  return HashSet__get_totalItems(self->allComptimeFuncDefSet);
+  return HashSet__get_totalItems(self->comptimeFeatures.allComptimeFuncDefSet);
 }
 
 
@@ -253,9 +203,10 @@ int SourceIndexer__addFuncScope(SourceIndexer *self, const char *inFuncName, Nod
 
   HeapArray<SourceScope*>::pushBack(&self->allScopes, newScope);
 
-  if (HashSet__set(self->allDefs, inFuncName) != 0 ||
-      HashSet__set(self->allRootDefs, inFuncName) != 0)
-  {
+  if (
+    HashSet__set(self->allDefIdentifiers, inFuncName) != 0 //||
+    // HashSet__set(self->allRootDefs, inFuncName) != 0
+  ) {
     SourceScope__free(&newScope);
     return -1;
   }
@@ -425,38 +376,38 @@ void SourceIndexer__computeScopesHierarchy(SourceIndexer *self)
     }
 
 
-    if (currScope->scopeType == ROOT_SCOPE)
-    {
-      printf(" -==-> [ROOT_SCOPE]\n");
-    }
-    else if (currScope->scopeType == FUNC_SCOPE)
-    {
-      printf(" -==-> [FUNC_SCOPE]\n");
-    }
-    else if (currScope->scopeType == BLOCK_SCOPE)
-    {
-      printf(" -==-> [BLOCK_SCOPE]\n");
-    }
-    else if (currScope->scopeType == STRUCT_SCOPE)
-    {
-      printf(" -==-> [STRUCT_SCOPE]\n");
-    }
-    else if (currScope->scopeType == ENUM_SCOPE)
-    {
-      printf(" -==-> [ENUM_SCOPE]\n");
-    }
-    else if (currScope->scopeType == UNION_SCOPE)
-    {
-      printf(" -==-> [UNION_SCOPE]\n");
-    }
-    else if (currScope->scopeType == TYPEDEF_SCOPE)
-    {
-      printf(" -==-> [TYPEDEF_SCOPE]\n");
-    }
-    else
-    {
-      printf(" -==-> [????_SCOPE]\n");
-    }
+    // if (currScope->scopeType == ROOT_SCOPE)
+    // {
+    //   printf(" -==-> [ROOT_SCOPE]\n");
+    // }
+    // else if (currScope->scopeType == FUNC_SCOPE)
+    // {
+    //   printf(" -==-> [FUNC_SCOPE]\n");
+    // }
+    // else if (currScope->scopeType == BLOCK_SCOPE)
+    // {
+    //   printf(" -==-> [BLOCK_SCOPE]\n");
+    // }
+    // else if (currScope->scopeType == STRUCT_SCOPE)
+    // {
+    //   printf(" -==-> [STRUCT_SCOPE]\n");
+    // }
+    // else if (currScope->scopeType == ENUM_SCOPE)
+    // {
+    //   printf(" -==-> [ENUM_SCOPE]\n");
+    // }
+    // else if (currScope->scopeType == UNION_SCOPE)
+    // {
+    //   printf(" -==-> [UNION_SCOPE]\n");
+    // }
+    // else if (currScope->scopeType == TYPEDEF_SCOPE)
+    // {
+    //   printf(" -==-> [TYPEDEF_SCOPE]\n");
+    // }
+    // else
+    // {
+    //   printf(" -==-> [????_SCOPE]\n");
+    // }
 
 
     if (currScope->parentScope == NULL)
@@ -477,9 +428,9 @@ void SourceIndexer__computeScopesHierarchy(SourceIndexer *self)
   }
 
   {
-    for (unsigned int ii = 0; ii < self->allVarDef.len; ++ii)
+    for (unsigned int ii = 0; ii < self->allFileVarDef.len; ++ii)
     {
-      VarDef* currVarDef = &self->allVarDef.data[ii];
+      VarDef* currVarDef = &self->allFileVarDef.data[ii];
       // currVarDef->parentScope = _SourceIndexer__findScope(self, &currVarDef->startPos, self->rootScope);
       currVarDef->parentScope = _SourceIndexer__findScopeFromStartEnd(self, &currVarDef->startPos, &currVarDef->endPos, self->rootScope);
 
@@ -488,9 +439,9 @@ void SourceIndexer__computeScopesHierarchy(SourceIndexer *self)
       HeapArray<VarDef>::pushBackRef(&currVarDef->parentScope->allVarDef, currVarDef);
     }
 
-    for (unsigned int ii = 0; ii < self->allFuncCalls.len; ++ii)
+    for (unsigned int ii = 0; ii < self->allFileFuncCalls.len; ++ii)
     {
-      IdentifiedRef* currFuncCall = &self->allFuncCalls.data[ii];
+      IdentifiedRef* currFuncCall = &self->allFileFuncCalls.data[ii];
       currFuncCall->parentScope = _SourceIndexer__findScope(self, &currFuncCall->startPos, self->rootScope);
       if (!currFuncCall->parentScope) {
         panic("count not find a parent scope for a function");
@@ -498,16 +449,16 @@ void SourceIndexer__computeScopesHierarchy(SourceIndexer *self)
       HeapArray<IdentifiedRef>::pushBackRef(&currFuncCall->parentScope->allFuncCalls, currFuncCall);
     }
 
-    for (unsigned int ii = 0; ii < self->allComptimeCalls.len; ++ii)
+    for (unsigned int ii = 0; ii < self->allFileComptimeCalls.len; ++ii)
     {
-      ComptimeCallRef* currComptimeCall = &self->allComptimeCalls.data[ii];
+      ComptimeCallRef* currComptimeCall = &self->allFileComptimeCalls.data[ii];
       currComptimeCall->parentScope = _SourceIndexer__findScope(self, &currComptimeCall->startPos, self->rootScope);
       HeapArray<ComptimeCallRef>::pushBackRef(&currComptimeCall->parentScope->allComptimeCalls, currComptimeCall);
     }
 
-    for (unsigned int ii = 0; ii < self->allVarRefs.len; ++ii)
+    for (unsigned int ii = 0; ii < self->allFileVarRefs.len; ++ii)
     {
-      IdentifiedRef* currVarRef = &self->allVarRefs.data[ii];
+      IdentifiedRef* currVarRef = &self->allFileVarRefs.data[ii];
       currVarRef->parentScope = _SourceIndexer__findScope(self, &currVarRef->startPos, self->rootScope);
       HeapArray<IdentifiedRef>::pushBackRef(&currVarRef->parentScope->allVarRefs, currVarRef);
     }
@@ -519,15 +470,76 @@ void SourceIndexer__computeScopesHierarchy(SourceIndexer *self)
 
 
 
+// MARK: computeDependencies
+void SourceIndexer__computeDependencies(SourceIndexer *self)
+{
+
+  for (unsigned int ii = 0; ii < self->rootScope->allChildrenScopes.len; ++ii)
+  {
+    const SourceScope *childScope = self->rootScope->allChildrenScopes.data[ii];
+    const char* funcName = childScope->funcName;
+
+    if (funcName == NULL) {
+      continue;
+    }
+
+    const int isExported = HashSet__contains(self->allExportedDefsSet, funcName);
+
+    switch (childScope->scopeType)
+    {
+    case FUNC_SCOPE:
+      HashSet__set(self->dependencies.allFunctions, funcName);
+      if (isExported != 0) {
+        HashSet__set(self->dependencies.provideFunctions, funcName);
+      }
+      break;
+    case STRUCT_SCOPE:
+    case ENUM_SCOPE:
+    case UNION_SCOPE:
+    case TYPEDEF_SCOPE:
+      HashSet__set(self->dependencies.allTypes, funcName);
+      if (isExported != 0) {
+        HashSet__set(self->dependencies.provideTypes, funcName);
+      }
+      break;
+    default:
+      break;
+    }
+  }
+
+  // foreign functions
+  for (unsigned int ii = 0; ii < self->allFileFuncCalls.len; ++ii)
+  {
+    IdentifiedRef* currVarDef = &self->allFileFuncCalls.data[ii];
+    if (HashSet__contains(self->dependencies.allFunctions, currVarDef->varName) == 0) {
+      HashSet__set(self->dependencies.requireFunctions, currVarDef->varName);
+    }
+  }
+
+  // foreign types
+  for (unsigned int ii = 0; ii < self->allFileVarDef.len; ++ii)
+  {
+    VarDef* currVarDef = &self->allFileVarDef.data[ii];
+    if (HashSet__contains(self->dependencies.allTypes, currVarDef->typeName) == 0) {
+      HashSet__set(self->dependencies.requireTypes, currVarDef->typeName);
+    }
+  }
+
+}
+
+
+
+
+
 // MARK: addVarDecl
 int SourceIndexer__addVarDecl(SourceIndexer *self, const char *inVarName, const char *inVarType, int inPtrLvl, NodePos inStartPos, NodePos inEndPos)
 {
   VarDef newVarDef = VarDef__create(inStartPos, inEndPos, inVarName, inVarType, inPtrLvl);
-  HeapArray<VarDef>::pushBackRef(&self->allVarDef, &newVarDef);
+  HeapArray<VarDef>::pushBackRef(&self->allFileVarDef, &newVarDef);
 
-  if (HashSet__set(self->allDefs, inVarName) != 0)
+  if (HashSet__set(self->allDefIdentifiers, inVarName) != 0)
   {
-    HeapArray<VarDef>::popBack(&self->allVarDef);
+    HeapArray<VarDef>::popBack(&self->allFileVarDef);
     VarDef__free(&newVarDef);
     return -1;
   }
@@ -538,11 +550,11 @@ int SourceIndexer__addVarDecl(SourceIndexer *self, const char *inVarName, const 
 int SourceIndexer__addFunCallRef(SourceIndexer *self, const char *inFuncCallName, NodePos inStartPos, NodePos inEndPos)
 {
   IdentifiedRef newFuncCallRef = IdentifiedRef::create(inStartPos, inEndPos, inFuncCallName);
-  HeapArray<IdentifiedRef>::pushBackRef(&self->allFuncCalls, &newFuncCallRef);
+  HeapArray<IdentifiedRef>::pushBackRef(&self->allFileFuncCalls, &newFuncCallRef);
 
-  if (HashSet__set(self->allDefs, inFuncCallName) != 0)
+  if (HashSet__set(self->allDefIdentifiers, inFuncCallName) != 0)
   {
-    HeapArray<IdentifiedRef>::popBack(&self->allFuncCalls);
+    HeapArray<IdentifiedRef>::popBack(&self->allFileFuncCalls);
     IdentifiedRef::free(&newFuncCallRef);
     return -1;
   }
@@ -553,10 +565,10 @@ int SourceIndexer__addFunCallRef(SourceIndexer *self, const char *inFuncCallName
 int SourceIndexer__addComptimeCall(SourceIndexer *self, const char *inComtimeCallName, const char *inComtimeArgs, NodePos inStartPos, NodePos inEndPos)
 {
   ComptimeCallRef newComptimeCallRef = ComptimeCallRef__create(inStartPos, inEndPos, inComtimeCallName, inComtimeArgs);
-  HeapArray<ComptimeCallRef>::pushBackRef(&self->allComptimeCalls, &newComptimeCallRef);
-  if (HashSet__set(self->allDefs, inComtimeCallName) != 0)
+  HeapArray<ComptimeCallRef>::pushBackRef(&self->allFileComptimeCalls, &newComptimeCallRef);
+  if (HashSet__set(self->allDefIdentifiers, inComtimeCallName) != 0)
   {
-    HeapArray<ComptimeCallRef>::popBack(&self->allComptimeCalls);
+    HeapArray<ComptimeCallRef>::popBack(&self->allFileComptimeCalls);
     ComptimeCallRef__free(&newComptimeCallRef);
     return -1;
   }
@@ -565,7 +577,7 @@ int SourceIndexer__addComptimeCall(SourceIndexer *self, const char *inComtimeCal
 
 const HeapArray<ComptimeCallRef>* SourceIndexer__getComptimeCallsList(const SourceIndexer *self)
 {
-  return &self->allComptimeCalls;
+  return &self->allFileComptimeCalls;
 }
 
 
@@ -574,19 +586,19 @@ const HeapArray<ComptimeCallRef>* SourceIndexer__getComptimeCallsList(const Sour
 // MARK: addVarRef
 int SourceIndexer__addVarRef(SourceIndexer *self, const char *inVarRefName, NodePos inStartPos, NodePos inEndPos)
 {
-  if (HashSet__contains(self->allDefs, inVarRefName))
+  if (HashSet__contains(self->allDefIdentifiers, inVarRefName))
   {
     return -1;
   }
 
   IdentifiedRef newVarRef = IdentifiedRef__create(inStartPos, inEndPos, inVarRefName);
-  HeapArray<IdentifiedRef>::pushBackRef(&self->allVarRefs, &newVarRef);
+  HeapArray<IdentifiedRef>::pushBackRef(&self->allFileVarRefs, &newVarRef);
 
-  if (HashSet__set(self->allRefs, inVarRefName) != 0)
-  {
-    IdentifiedRef__free(&newVarRef);
-    return -1;
-  }
+  // if (HashSet__set(self->allRefs, inVarRefName) != 0)
+  // {
+  //   IdentifiedRef__free(&newVarRef);
+  //   return -1;
+  // }
   return 0;
 }
 
@@ -657,6 +669,8 @@ const HashMap* SourceIndexer__getComptimeTextsToReplace(const SourceIndexer *sel
 
 
 
+
+
 //MARK: findTypename
 const VarDef* SourceIndexer__findTypename(const SourceIndexer *self, const char *inVarRefName, NodePos inStartPos)
 {
@@ -666,11 +680,12 @@ const VarDef* SourceIndexer__findTypename(const SourceIndexer *self, const char 
     return NULL;
   }
 
-  for (const SourceScope* cursor = parentScope; cursor; cursor = cursor->parentScope)
+  // direction: childScope --> parentScope
+  for (const SourceScope* currScope = parentScope; currScope; currScope = currScope->parentScope)
   {
-    for (unsigned int ii = 0; ii < cursor->allVarDef.len; ++ii)
+    for (unsigned int ii = 0; ii < currScope->allVarDef.len; ++ii)
     {
-      VarDef* currVarDef = &cursor->allVarDef.data[ii];
+      VarDef* currVarDef = &currScope->allVarDef.data[ii];
       if (strcmp(currVarDef->varName, inVarRefName) == 0)
       {
         return currVarDef;
@@ -685,260 +700,24 @@ const VarDef* SourceIndexer__findTypename(const SourceIndexer *self, const char 
 
 
 
-
-
-static void _SourceIndexer__debugPrefix(StreamWriter *inStreamWriter, int inLevel, const char* inPattern)
-{
-  for (int ii = 0; ii < inLevel; ++ii)
-  {
-    StreamWriter__write(inStreamWriter, inPattern, strlen(inPattern));
-  }
-}
-
-// MARK: debugTraverseScopeTree
-static void _SourceIndexer__debugTraverseScopeTree(SourceScope *currScope, StreamWriter *inStreamWriter, int inLevel)
-{
-  _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "|---");
-
-  char buffer[1024];
-  memset(buffer, 0, 1024);
-
-  snprintf(buffer, 1024, " [L%02d_C%02d]->[L%02d_C%02d] ", currScope->startPos.row, currScope->startPos.column, currScope->endPos.row, currScope->endPos.column);
-  StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-  if (currScope->scopeType == ROOT_SCOPE)
-  {
-    snprintf(buffer, 1024, "[ROOT_SCOPE]");
-  }
-  else if (currScope->scopeType == FUNC_SCOPE)
-  {
-    snprintf(buffer, 1024, "[FUNC_SCOPE]");
-  }
-  else if (currScope->scopeType == BLOCK_SCOPE)
-  {
-    snprintf(buffer, 1024, "[BLOCK_SCOPE]");
-  }
-  else if (currScope->scopeType == STRUCT_SCOPE)
-  {
-    snprintf(buffer, 1024, "[STRUCT_SCOPE]");
-  }
-  else if (currScope->scopeType == ENUM_SCOPE)
-  {
-    snprintf(buffer, 1024, "[ENUM_SCOPE]");
-  }
-  else if (currScope->scopeType == UNION_SCOPE)
-  {
-    snprintf(buffer, 1024, "[UNION_SCOPE]");
-  }
-  else if (currScope->scopeType == TYPEDEF_SCOPE)
-  {
-    snprintf(buffer, 1024, "[TYPEDEF_SCOPE]");
-  }
-  else
-  {
-    snprintf(buffer, 1024, "[????_SCOPE]");
-  }
-  StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-  if (currScope->funcName)
-  {
-    snprintf(buffer, 1024, " ---> \"%s\"", currScope->funcName);
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-  }
-
-  snprintf(buffer, 1024, "\n");
-  StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-  for (unsigned int ii = 0; ii < currScope->allVarDef.len; ++ii)
-  {
-    VarDef *currVar = &currScope->allVarDef.data[ii];
-
-    _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "=-=-");
-
-    snprintf(buffer, 1024, " =>");
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-    snprintf(buffer, 1024, " [L%02d_C%02d]->[L%02d_C%02d] ", currVar->startPos.row, currVar->startPos.column, currVar->endPos.row, currVar->endPos.column);
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-    snprintf(buffer, 1024, " -> VarDef: type=\"%s\", ptrLvl=\"%d\", name=\"%s\"", currVar->typeName, currVar->pointerLevel, currVar->varName);
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-    snprintf(buffer, 1024, "\n");
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-  }
-
-  for (unsigned int ii = 0; ii < currScope->allFuncCalls.len; ++ii)
-  {
-    IdentifiedRef *currId = &currScope->allFuncCalls.data[ii];
-
-    _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "=-=-");
-
-    snprintf(buffer, 1024, " =>");
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-    snprintf(buffer, 1024, " [L%02d_C%02d]->[L%02d_C%02d] ", currId->startPos.row, currId->startPos.column, currId->endPos.row, currId->endPos.column);
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-    snprintf(buffer, 1024, " -> FunCall: name=\"%s\"", currId->varName);
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-    snprintf(buffer, 1024, "\n");
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-  }
-
-  for (unsigned int ii = 0; ii < currScope->allComptimeCalls.len; ++ii)
-  {
-    ComptimeCallRef *currCall = &currScope->allComptimeCalls.data[ii];
-
-    _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "=-=-");
-
-    snprintf(buffer, 1024, " =>");
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-    snprintf(buffer, 1024, " [L%02d_C%02d]->[L%02d_C%02d] ", currCall->startPos.row, currCall->startPos.column, currCall->endPos.row, currCall->endPos.column);
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-    snprintf(buffer, 1024, " -> ComptimeCall: name=\"%s\", args=\"%s\"", currCall->varName, currCall->argsValue);
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-    for (unsigned int ii = 0; ii < currCall->argsList.len; ++ii)
-    {
-      const StringData* argStr = &currCall->argsList.data[ii];
-
-      snprintf(buffer, 1024, " { args[%d]=\"%s\" }", ii, argStr->data);
-      StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-    }
-
-    snprintf(buffer, 1024, "\n");
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-  }
-
-  for (unsigned int ii = 0; ii < currScope->allVarRefs.len; ++ii)
-  {
-    IdentifiedRef *currId = &currScope->allVarRefs.data[ii];
-
-    _SourceIndexer__debugPrefix(inStreamWriter, inLevel, "=-=-");
-
-    snprintf(buffer, 1024, " =>");
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-    snprintf(buffer, 1024, " [L%02d_C%02d]->[L%02d_C%02d] ", currId->startPos.row, currId->startPos.column, currId->endPos.row, currId->endPos.column);
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-    snprintf(buffer, 1024, " -> VarRef: name=\"%s\"", currId->varName);
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-    snprintf(buffer, 1024, "\n");
-    StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-  }
-
-  // StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-  for (unsigned int ii = 0; ii < currScope->allChildrenScopes.len; ++ii)
-  {
-    SourceScope *childScope = currScope->allChildrenScopes.data[ii];
-    _SourceIndexer__debugTraverseScopeTree(childScope, inStreamWriter, inLevel + 1);
-  }
-}
-
-// MARK: debugTree
-void SourceIndexer__debugScopeTree(SourceIndexer *self, const char* inBaseDir, StreamWriter *inStreamWriter)
-{
-
-  {
-
-    char buffer[1024];
-    memset(buffer, 0, 1024);
-
-    {
-      unsigned int totalItems = 0;
-      char** allKeys = HashSet__get_allKeys(self->importedFiles.filepathsSet, &totalItems);
-
-      snprintf(buffer, 1024, "IMPORTS (total: %d)\n", totalItems);
-      StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-      const unsigned int toSkip = strlen(inBaseDir);
-
-      for (unsigned int ii = 0; ii < totalItems; ++ii)
-      {
-        const char* currPath = allKeys[ii];
-        const char* relPath = currPath + toSkip + 1;
-
-        snprintf(buffer, 1024, "-> filepath=%s\n", relPath);
-        StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-      }
-
-      free(allKeys);
-    }
-
-    // HashMap *textsToReplace; // ex: "HeapArena<int>" -> "HeapArena__int"
-    {
-      unsigned int totalItems = 0;
-      EntryItem* items = HashMap__get_allItems(self->comptimeFeatures.textsToReplace, &totalItems);
-
-      snprintf(buffer, 1024, "TEXTS_TO_REPLACE (total: %d)\n", totalItems);
-      StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-      for (unsigned int ii = 0; ii < totalItems; ++ii)
-      {
-        const char* replacement = items[ii].value;
-        snprintf(buffer, 1024, "-> %s=%s\n", items[ii].key, replacement);
-        StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-      }
-
-      free(items);
-    }
-
-    // HashSet *typesToResolve; // ex: "Vec3", etc.
-    {
-      unsigned int totalItems = 0;
-      char** allKeys = HashSet__get_allKeys(self->comptimeFeatures.typesToResolve, &totalItems);
-
-      snprintf(buffer, 1024, "TYPES_TO_RESOLVE (total: %d)\n", totalItems);
-      StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-
-      for (unsigned int ii = 0; ii < totalItems; ++ii)
-      {
-        snprintf(buffer, 1024, "-> type=%s\n", allKeys[ii]);
-        StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-      }
-
-      free(allKeys);
-    }
-
-  }
-
-
-  {
-    unsigned int totalKeys = 0;
-    char** allKeys = HashSet__get_allKeys(self->allExportedDefsSet, &totalKeys);
-
-    char buffer[1024];
-    memset(buffer, 0, 1024);
-
-    for (unsigned int ii = 0; ii < totalKeys; ++ii)
-    {
-      snprintf(buffer, 1024, " -> exported=%s\n", allKeys[ii]);
-      StreamWriter__write(inStreamWriter, buffer, strlen(buffer));
-    }
-
-    free(allKeys);
-  }
-
-
-  _SourceIndexer__debugTraverseScopeTree(self->rootScope, inStreamWriter, 1);
-}
-
 int SourceIndexer__hasMainFunction(const SourceIndexer *self)
 {
   for (unsigned int ii = 0; ii < self->rootScope->allChildrenScopes.len; ++ii)
   {
     const SourceScope *childScope = self->rootScope->allChildrenScopes.data[ii];
-    if (childScope->funcName && strcmp(childScope->funcName, "main") == 0)
-    {
+    if (
+      childScope->scopeType == FUNC_SCOPE &&
+      childScope->funcName != NULL &&
+      strcmp(childScope->funcName, "main") == 0
+    ) {
       return 1;
     }
   }
   return 0;
 }
+
+int SourceIndexer__require(const SourceIndexer *self, const SourceIndexer *other)
+{
+  return Dependencies__require(&self->dependencies, &other->dependencies);
+}
+

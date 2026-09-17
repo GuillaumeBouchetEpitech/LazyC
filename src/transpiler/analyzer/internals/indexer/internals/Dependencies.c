@@ -1,0 +1,60 @@
+
+#include "./Dependencies.h"
+
+#include <stdlib.h>
+
+Dependencies Dependencies__create()
+{
+  Dependencies self;
+  self.allFunctions = HashSet__preAllocate(32);
+  self.allTypes = HashSet__preAllocate(32);
+  self.provideFunctions = HashSet__preAllocate(32);
+  self.provideTypes = HashSet__preAllocate(32);
+  self.requireFunctions = HashSet__preAllocate(32);
+  self.requireTypes = HashSet__preAllocate(32);
+  return self;
+}
+
+void Dependencies__free(Dependencies* self)
+{
+  HashSet__free(&self->allFunctions);
+  HashSet__free(&self->allTypes);
+  HashSet__free(&self->provideFunctions);
+  HashSet__free(&self->provideTypes);
+  HashSet__free(&self->requireFunctions);
+  HashSet__free(&self->requireTypes);
+}
+
+int Dependencies__require(const Dependencies* self, const Dependencies* other)
+{
+  if (HashSet__get_totalItems(self->requireFunctions) > 0) {
+    unsigned int totalKeys = 0;
+    char** allKeys = HashSet__get_allKeys(self->requireFunctions, &totalKeys);
+
+    for (unsigned int ii = 0; ii < totalKeys; ++ii) {
+      if (HashSet__contains(other->provideFunctions, allKeys[ii]) != 0) {
+        free(allKeys);
+        return 1;
+      }
+    }
+
+    free(allKeys);
+  }
+
+  if (HashSet__get_totalItems(self->requireTypes) > 0) {
+    unsigned int totalKeys = 0;
+    char** allKeys = HashSet__get_allKeys(self->requireTypes, &totalKeys);
+
+    for (unsigned int ii = 0; ii < totalKeys; ++ii) {
+      if (HashSet__contains(other->provideTypes, allKeys[ii]) != 0) {
+        free(allKeys);
+        return 1;
+      }
+    }
+
+    free(allKeys);
+  }
+
+  return 0;
+}
+

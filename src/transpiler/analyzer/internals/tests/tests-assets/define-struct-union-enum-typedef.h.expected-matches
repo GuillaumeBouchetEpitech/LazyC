@@ -1,0 +1,65 @@
+
+IMPORTS (total: 0)
+
+TEXTS_TO_REPLACE (total: 0)
+
+TYPES_TO_RESOLVE (total: 0)
+
+TOTAL EXPORTED (total: 4)
+ -> exported=testStructB
+ -> exported=testUnionA
+ -> exported=testEnumA
+ -> exported=testStructA
+
+DEP---ALL-FUNCTIONS (total: 0)
+
+DEP---ALL-TYPES (total: 4)
+ -> dep-type=testStructB
+ -> dep-type=testUnionA
+ -> dep-type=testEnumA
+ -> dep-type=testStructA
+
+DEP---PROVIDED-FUNCTIONS (total: 0)
+
+DEP---PROVIDED-TYPES (total: 4)
+ -> dep-type=testStructB
+ -> dep-type=testUnionA
+ -> dep-type=testEnumA
+ -> dep-type=testStructA
+
+DEP---REQUIRE-FUNCTIONS (total: 0)
+
+DEP---REQUIRE-TYPES (total: 3)
+ -> dep-type={
+    int nestedFieldB_int;
+    float nestedFieldB_float;
+  }
+ -> dep-type=float
+ -> dep-type=int
+
+ALL SCOPES
+|--- [L01_C00]->[L37_C00] [ROOT_SCOPE]
+|---|--- [L03_C00]->[L07_C01] [STRUCT_SCOPE] ---> "testStructA"
+=-=-=-=- => [L05_C02]->[L05_C21]  -> VarDef: type="int", ptrLvl="0", name="testFieldA_int"
+=-=-=-=- => [L06_C02]->[L06_C25]  -> VarDef: type="float", ptrLvl="0", name="testFieldA_float"
+|---|--- [L09_C00]->[L16_C12] [TYPEDEF_SCOPE] ---> "testStructB"
+|---|---|--- [L09_C08]->[L15_C01] [STRUCT_SCOPE] ---> "testStructB"
+=-=-=-=-=-=- => [L11_C02]->[L11_C21]  -> VarDef: type="int", ptrLvl="0", name="testFieldB_int"
+=-=-=-=-=-=- => [L12_C02]->[L12_C25]  -> VarDef: type="float", ptrLvl="0", name="testFieldB_float"
+=-=-=-=-=-=- => [L13_C02]->[L13_C38]  -> VarDef: type="testStructB", ptrLvl="1", name="testFieldB_self"
+=-=-=-=-=-=- => [L14_C02]->[L14_C38]  -> VarDef: type="testStructA", ptrLvl="0", name="testFieldB_other"
+|---|--- [L18_C00]->[L28_C01] [UNION_SCOPE] ---> "testUnionA"
+=-=-=-=- => [L19_C02]->[L19_C45]  -> VarDef: type="testStructA", ptrLvl="0", name="testUnionFieldA_structA"
+=-=-=-=- => [L20_C02]->[L20_C38]  -> VarDef: type="testStructB", ptrLvl="0", name="testUnionFieldA_structB"
+=-=-=-=- => [L22_C02]->[L26_C14]  -> VarDef: type="{
+    int nestedFieldB_int;
+    float nestedFieldB_float;
+  }", ptrLvl="0", name="nestedField"
+|---|---|--- [L22_C02]->[L25_C03] [STRUCT_SCOPE]
+=-=-=-=-=-=- => [L23_C04]->[L23_C25]  -> VarDef: type="int", ptrLvl="0", name="nestedFieldB_int"
+=-=-=-=-=-=- => [L24_C04]->[L24_C29]  -> VarDef: type="float", ptrLvl="0", name="nestedFieldB_float"
+|---|--- [L30_C00]->[L34_C01] [ENUM_SCOPE] ---> "testEnumA"
+=-=-=-=- => [L31_C02]->[L31_C06]  -> VarRef: name="VAL1"
+=-=-=-=- => [L32_C02]->[L32_C06]  -> VarRef: name="VAL2"
+=-=-=-=- => [L33_C02]->[L33_C06]  -> VarRef: name="VAL3"
+|---|--- [L36_C00]->[L36_C39] [TYPEDEF_SCOPE] ---> "testStructA"

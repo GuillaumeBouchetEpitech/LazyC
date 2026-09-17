@@ -18,6 +18,8 @@ typedef struct AnalyzedFile
   AnalyzedFileType fileType;
   SourceParsedFile *parsedFile;
   SourceIndexer *indexer;
+
+  int isRelevant;
 }
 AnalyzedFile;
 

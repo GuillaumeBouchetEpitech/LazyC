@@ -4,6 +4,7 @@
 
 ///comptime-lazy-c: "text-replace" "LOOOOOL" "LOLOLOL"
 ///comptime-lazy-c: "resolve-includes" "int"
+///comptime-lazy-c: "resolve-includes" "SomeImaginaryStruct"
 
 int main(int argc, char **argv)
 {

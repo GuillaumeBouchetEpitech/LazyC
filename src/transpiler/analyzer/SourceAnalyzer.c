@@ -139,6 +139,15 @@ static int _sortByImportedDepCallback(void *left, void *right, void *userData)
   const AnalyzedFile * leftData = left;
   const AnalyzedFile * rightData = right;
 
+  if (SourceIndexer__require(leftData->indexer, rightData->indexer) != 0)
+  {
+    return -1;
+  }
+  if (SourceIndexer__require(rightData->indexer, leftData->indexer) != 0)
+  {
+    return 1;
+  }
+
   unsigned int leftTotal = SourceIndexer__getTotalImports(leftData->indexer);
   unsigned int rightTotal = SourceIndexer__getTotalImports(rightData->indexer);
 
@@ -254,7 +263,119 @@ void SourceAnalyzer__scanFromMainFile(SourceAnalyzer *self, const char *inEntryF
     AnalyzedFile* inputFile = HashMap__get(self->filesMap, inEntryFilepath);
     if (inputFile)
     {
-      // inputFile->indexer
+      printf("====\n");
+      printf("====== PICK RELEVANT FILES\n");
+      printf("====\n");
+
+      unsigned int totalKeys;
+      EntryItem* allItems = HashMap__get_allItems(self->filesMap, &totalKeys);
+
+      printf(" -> totalKeys: %d\n", totalKeys);
+
+      for (unsigned int ii = 0; ii < totalKeys; ++ii)
+      {
+        AnalyzedFile* toCheckFile = allItems[ii].value;
+        toCheckFile->isRelevant = 0;
+      }
+
+      // dijkstra type of step by step exploration
+      PointerHeapArray* openList = PointerHeapArray__preAllocate(32);
+      HashSet* closeSet = HashSet__preAllocate(32);
+
+      inputFile->isRelevant = 1;
+      PointerHeapArray__pushBack(openList, inputFile);
+
+      while (openList->len > 0)
+      {
+        AnalyzedFile* currFile = openList->data[0];
+        PointerHeapArray__popFront(openList);
+        HashSet__set(closeSet, currFile->filepath);
+
+        printf(" -> EXPLORING: %s\n", currFile->filepath);
+
+        // explore for any is a relevant file
+
+        for (unsigned int ii = 0; ii < totalKeys; ++ii)
+        {
+          AnalyzedFile* toCheckFile = allItems[ii].value;
+
+          if (toCheckFile->isRelevant == 1) {
+            continue;
+          }
+
+          if (
+            currFile->fileType == SOURCE_C &&
+            toCheckFile->fileType == SOURCE_C
+          ) {
+            continue;
+          }
+
+          if (currFile->fileType == SOURCE_C)
+          {
+            if (
+              SourceIndexer__hasImport(currFile->indexer, toCheckFile->filepath)
+            ) {
+              toCheckFile->isRelevant = 1;
+              PointerHeapArray__pushBack(openList, toCheckFile);
+
+              printf(" ---> PUSHED: %s\n", toCheckFile->filepath);
+            }
+            else if (SourceIndexer__require(toCheckFile->indexer, currFile->indexer) != 0)
+            {
+              toCheckFile->isRelevant = 1;
+              PointerHeapArray__pushBack(openList, toCheckFile);
+
+              printf(" ---> PUSHED: %s\n", toCheckFile->filepath);
+            }
+          }
+          else if (toCheckFile->fileType == SOURCE_C)
+          {
+            if (
+              SourceIndexer__hasImport(toCheckFile->indexer, currFile->filepath)
+            ) {
+              toCheckFile->isRelevant = 1;
+              PointerHeapArray__pushBack(openList, toCheckFile);
+
+              printf(" ---> PUSHED: %s\n", toCheckFile->filepath);
+            }
+            else if (SourceIndexer__require(currFile->indexer, toCheckFile->indexer) != 0)
+            {
+              toCheckFile->isRelevant = 1;
+              PointerHeapArray__pushBack(openList, toCheckFile);
+
+              printf(" ---> PUSHED: %s\n", toCheckFile->filepath);
+            }
+          }
+          else
+          {
+            if (
+              SourceIndexer__require(currFile->indexer, toCheckFile->indexer) != 0 ||
+              SourceIndexer__require(toCheckFile->indexer, currFile->indexer) != 0
+            ) {
+              toCheckFile->isRelevant = 1;
+              PointerHeapArray__pushBack(openList, toCheckFile);
+
+              printf(" ---> PUSHED: %s\n", toCheckFile->filepath);
+            }
+          }
+
+        }
+      }
+
+      printf("====\n");
+      printf("======\n");
+      printf("====\n");
+
+      // for (unsigned int ii = 0; ii < totalKeys; ++ii)
+      // {
+      //   for (unsigned int jj = ii + 1; jj < totalKeys; ++jj)
+      //   {
+      //     if ()
+      //     {
+      //       analyzedFile->isRelevant = 0;
+      //     }
+      //   }
+      // }
 
       // -> use includes
       // -> if LC/C file
@@ -273,14 +394,26 @@ void SourceAnalyzer__scanFromMainFile(SourceAnalyzer *self, const char *inEntryF
       unsigned int totalKeys;
       EntryItem* allItems = HashMap__get_allItems(self->filesMap, &totalKeys);
 
+
+      // for (unsigned int ii = 0; ii < totalKeys; ++ii)
+      // {
+      //   for (unsigned int jj = ii + 1; jj < totalKeys; ++jj)
+      //   {
+      //     if ()
+      //     {
+      //       analyzedFile->isRelevant = 0;
+      //     }
+      //   }
+      // }
+
+
       for (unsigned int ii = 0; ii < totalKeys; ++ii)
       {
-        // AnalyzedFile* currFile = allItems[ii].value;
-
-        // // currFile->indexer
-
-
-        PointerHeapArray__pushBack(self->depSortedAnalyzed, allItems[ii].value);
+        AnalyzedFile* currFile = allItems[ii].value;
+        if (currFile->isRelevant == 1)
+        {
+          PointerHeapArray__pushBack(self->depSortedAnalyzed, currFile);
+        }
       }
 
       free(allItems);
@@ -464,46 +597,80 @@ int SourceAnalyzer__scanFile(SourceAnalyzer *self, const char *inFilepath, Point
   free(allImports);
   free(currDir);
 
-  if (inIncludePath)
+  // if (inIncludePath)
   {
     unsigned int totalRawImports;
     char** allRawImports = SourceIndexer__getAllRawImports(analyzedFile->indexer, &totalRawImports);
+    char* currDir = Path__dirname(analyzedFile->filepath);
 
     for (unsigned int ii = 0; ii < totalRawImports; ++ii)
     {
       char* currRawImport = allRawImports[ii];
 
-      // is absolute or relative -> skip
+      // if path is absolute/relative -> skip
       if (currRawImport[0] == '/' || currRawImport[0] == '.') {
         continue;
       }
 
-      // char* fullPath = Path__join(2, currDir, allImports[ii]);
+      int resolved = 0;
 
-      for (unsigned int jj = 0; jj < inIncludePath->len; ++jj)
       {
-        const char* currFolderPath = inIncludePath->data[jj];
-
-        char* tmpPath = Path__join(2, currFolderPath, currRawImport);
+        char* tmpPath = Path__join(2, currDir, currRawImport);
 
         if (HashMap__contains(self->filesMap, tmpPath) != 0)
         {
-          free(tmpPath);
-          continue;
+          resolved = 1;
         }
-
-        if (HashMap__contains(self->filesMap, tmpPath) == 0 && Stat__pathExist(tmpPath))
+        else if (Stat__pathExist(tmpPath))
         {
           HashSet__set(self->nextFileToScanSet, tmpPath);
-          free(tmpPath);
-          break;
+          resolved = 1;
         }
 
+        if (resolved == 1)
+        {
+          SourceIndexer__addImport(analyzedFile->indexer, tmpPath);
+        }
         free(tmpPath);
+      }
+
+      if (resolved == 0 && inIncludePath)
+      {
+        for (unsigned int jj = 0; jj < inIncludePath->len; ++jj)
+        {
+          const char* currFolderPath = inIncludePath->data[jj];
+
+          char* tmpPath = Path__join(2, currFolderPath, currRawImport);
+
+          if (HashMap__contains(self->filesMap, tmpPath) != 0)
+          {
+            resolved = 1;
+          }
+          else if (Stat__pathExist(tmpPath))
+          {
+            HashSet__set(self->nextFileToScanSet, tmpPath);
+            resolved = 1;
+          }
+
+          if (resolved == 1)
+          {
+            SourceIndexer__addImport(analyzedFile->indexer, tmpPath);
+          }
+          free(tmpPath);
+        }
+      }
+
+      if (resolved == 0)
+      {
+        fprintf(stderr, "one include could not be resolved\n");
+        fprintf(stderr, " filepath: %s\n", currRawImport);
+        fprintf(stderr, " include: %s\n", analyzedFile->filepath);
+        panic("one include could not be resolved");
       }
 
     }
 
+    free(currDir);
     free(allRawImports);
   }
 

@@ -252,6 +252,11 @@ static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIn
   }
   printf("HAS COMPTIME\n");
 
+  printf("##\n");
+  printf("####\n");
+  printf("######\n");
+  printf("########\n");
+
   // ensure the right `{baseDir}/.generated` folder
   // -> for the `comptime.main.c` file
   char* generatedFolderPath = Path__join(2, self->baseDir, ".generated");
@@ -648,7 +653,8 @@ static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIn
   {
     char* filepathStr = allComptimeGeneratedFiles->data[ii];
 
-    if (SourceAnalyzer__scanFile(self->analyzer, filepathStr, NULL) < 0)
+    // if (SourceAnalyzer__scanFile(self->analyzer, filepathStr, NULL) < 0)
+    if (SourceAnalyzer__scanFile(self->analyzer, filepathStr, inIncludePath) < 0)
     {
       fprintf(stderr, "\nFATAL ERROR:\n -> failed to scan the comptime generated source code\n ---> %s\n", filepathStr);
       panic("failed to scan the comptime generated source code");
@@ -690,6 +696,11 @@ static int _Transpiler__processComptime(Transpiler* self, PointerHeapArray* inIn
   free(generatedFolderPath);
 
   printf("COMPTIME DONE\n");
+
+  printf("########\n");
+  printf("######\n");
+  printf("####\n");
+  printf("##\n");
 
   // free(allAnalyzed);
   return 0;
@@ -828,6 +839,8 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
   // source file data
   PointerHeapArray* allEdits = PointerHeapArray__preAllocate(32);
   // header file data
+  PointerHeapArray* allTmpImports = PointerHeapArray__preAllocate(32);
+  // header file data
   PointerHeapArray* allStructs = PointerHeapArray__preAllocate(32);
   // header file data
   PointerHeapArray* allSignatures = PointerHeapArray__preAllocate(32);
@@ -857,18 +870,18 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
       if (srcStr[0] == '\"' && srcStr[contentSize - 1] == '\"') {
         // ex -> #include "some-filepath.h"
 
-        char* tmpContent = strndup(srcStr + 1, contentSize - 2);
-        char* tmpExtName = Path__extname(tmpContent);
+        char* includedPathStr = strndup(srcStr + 1, contentSize - 2);
+        char* includedPathExtStr = Path__extname(includedPathStr);
 
-        // printf(" IMPORT_SOURCE ---> {%s} (%s)\n", tmpContent, tmpExtName);
+        // printf(" IMPORT_SOURCE ---> {%s} (%s)\n", includedPathStr, includedPathExtStr);
 
         if (
-          strcmp(tmpExtName, ".c") == 0 ||
-          strcmp(tmpExtName, ".lc") == 0
+          strcmp(includedPathExtStr, ".c") == 0 ||
+          strcmp(includedPathExtStr, ".lc") == 0
         ) {
 
           StringBuffer* strbuffer = StringBuffer__create();
-          StringBuffer__appendData(strbuffer, contentSize - 2 - strlen(tmpExtName), tmpContent);
+          StringBuffer__appendData(strbuffer, contentSize - 2 - strlen(includedPathExtStr), includedPathStr);
           StringBuffer__appendCString(strbuffer, ".h");
 
           char buffer[1024];
@@ -886,19 +899,26 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
             PointerHeapArray__pushBack(allEdits, newEdit);
           }
 
-          // printf("  -> HAS EDIT ---> replacement=[%s]\n", buffer);
+          // printf("  -> IMPORT EDIT ---> replacement=[%s]\n", buffer);
 
           StringBuffer__free(&strbuffer);
+
+          // ex -> #include "..."
+          PointerHeapArray__pushBack(allTmpImports, strdup(buffer));
         }
         else
         {
-          // printf("  => NO EDIT\n");
+          // ex -> #include "..."
+          PointerHeapArray__pushBack(allTmpImports, strndup(srcStr, contentSize));
         }
 
-        // SourceIndexer__addImport(self->indexer, tmpContent);
-
-        free(tmpExtName);
-        free(tmpContent);
+        free(includedPathExtStr);
+        free(includedPathStr);
+      }
+      else
+      {
+        // ex -> #include <...>
+        PointerHeapArray__pushBack(allTmpImports, strndup(srcStr, contentSize));
       }
     }
     else if (
@@ -1570,6 +1590,19 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
       }
     }
 
+    {
+      for (unsigned int ii = 0; ii < allTmpImports->len; ++ii) {
+        char* pStr = allTmpImports->data[ii];
+
+        const int bufSize = strlen(pStr) + 32;
+        char* tmpBuf = calloc(bufSize, sizeof(char));
+        snprintf(tmpBuf, bufSize, "#include %s\n", pStr);
+        StreamWriter__write(streamWriter, tmpBuf, strlen(tmpBuf));
+        free(tmpBuf);
+      }
+
+    }
+
 
     for (unsigned int ii = 0; ii < allStructs->len; ++ii) {
       char* pStr = allStructs->data[ii];
@@ -1789,6 +1822,12 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
     free(currEdit);
   }
   PointerHeapArray__free(&allEdits);
+
+  for (unsigned int ii = 0; ii < allTmpImports->len; ++ii) {
+    char* pStr = allTmpImports->data[ii];
+    free(pStr);
+  }
+  PointerHeapArray__free(&allTmpImports);
 
   for (unsigned int ii = 0; ii < allStructs->len; ++ii) {
     char* pStr = allStructs->data[ii];

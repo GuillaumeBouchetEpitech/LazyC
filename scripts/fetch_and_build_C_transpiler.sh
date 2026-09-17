@@ -12,7 +12,7 @@
 #
 #
 
-if [ -f ./_tmp/c-transpiler/bin/exec ];
+if [ -f ./_tmp/v0.0.1-the-c-prototype/bin/exec ];
 then
   echo "compiled C transpiler found -> doing nothing"
 
@@ -20,7 +20,7 @@ else
 
   echo "compiled C transpiler not found"
 
-  if [ ! -d ./_tmp/c-transpiler ];
+  if [ ! -d ./_tmp/v0.0.1-the-c-prototype ];
   then
 
     echo "cloning compiled C transpiler"
@@ -28,14 +28,14 @@ else
     mkdir -p ./_tmp
     git clone \
       --depth 1 --branch v0.0.1-the-c-prototype \
-      https://github.com/GuillaumeBouchetEpitech/LazyC.git ./_tmp/c-transpiler \
+      https://github.com/GuillaumeBouchetEpitech/LazyC.git ./_tmp/v0.0.1-the-c-prototype \
       || exit 1
 
   fi
 
   echo "building compiled C transpiler"
 
-  pushd ./_tmp/c-transpiler || exit 1
+  pushd ./_tmp/v0.0.1-the-c-prototype || exit 1
 
     bash ./scripts/ensure_third_parties.sh || exit 1
     bash ./scripts/build_transpiler.sh || exit 1
@@ -86,14 +86,14 @@ pushd ./_tmp/v0.0.2-dirty-100x-faster-prototype || exit 1
   # bash ./scripts/ensure_third_parties.sh || exit 1
   # bash ./scripts/build_transpiler.sh || exit 1
 
-  ../c-transpiler/bin/exec \
+  ../v0.0.1-the-c-prototype/bin/exec \
     "--base-dir=${PWD}/src/" \
     "--input-file=${PWD}/src/main.c" \
     "--output-dir=${PWD}/output" \
-    "--add-include-path=${PWD}/../c-transpiler/third_parties/tree-sitter-lazy-c/bindings/c" \
-    "--add-library-path=${PWD}/../c-transpiler/third_parties/tree-sitter-lazy-c/build-native/tree-sitter-lazy_c.a" \
-    "--add-include-path=${PWD}/../c-transpiler/third_parties/tree-sitter/lib/include" \
-    "--add-library-path=${PWD}/../c-transpiler/third_parties/tree-sitter/libtree-sitter.a" \
+    "--add-include-path=${PWD}/../v0.0.1-the-c-prototype/third_parties/tree-sitter-lazy-c/bindings/c" \
+    "--add-library-path=${PWD}/../v0.0.1-the-c-prototype/third_parties/tree-sitter-lazy-c/build-native/tree-sitter-lazy_c.a" \
+    "--add-include-path=${PWD}/../v0.0.1-the-c-prototype/third_parties/tree-sitter/lib/include" \
+    "--add-library-path=${PWD}/../v0.0.1-the-c-prototype/third_parties/tree-sitter/libtree-sitter.a" \
     || exit 1
 
 popd || exit 1

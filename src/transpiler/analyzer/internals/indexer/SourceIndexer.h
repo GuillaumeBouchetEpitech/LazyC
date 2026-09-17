@@ -2,16 +2,67 @@
 #pragma once
 
 #include "../parser/SourceParser.h"
+
 #include "./internals/VarDef.h"
+#include "./internals/IdentifiedRef.h"
+#include "./internals/ComptimeCallRef.h"
+#include "./internals/SourceScope.h"
+// #include "./internals/Dependencies.lc"
+#include "./internals/Dependencies.h"
 
-// opaque declaration
-typedef struct SourceIndexer SourceIndexer;
-// typedef struct VarDef VarDef;
+#include "stdlib/core/panic.h"
+#include "stdlib/collections/HashMap.h"
+#include "stdlib/collections/HashSet.h"
+#include "stdlib/collections/PointerHeapArray.h"
+#include "stdlib/filesystem/StreamWriter.h"
 
-// forward declaration
-typedef struct PointerHeapArray PointerHeapArray;
-typedef struct HashSet HashSet;
-typedef struct HashMap HashMap;
+#include "stdlib/collections/HeapArray.lc"
+
+// MARK: SourceIndexer
+typedef struct ImportedFiles
+{
+  // set of path (absolute path or relative path made absolute)
+  HashSet *filepathsSet;
+  // set of path (not absolute nor relative path, very likely dependant on includepath)
+  HashSet *rawFilepathsSet;
+}
+ImportedFiles;
+
+typedef struct ComptimeFeatures
+{
+  // ex: "Vec3", etc.
+  HashSet *typesToResolve;
+  // ex: "HeapArena<int>" -> "HeapArena__int"
+  HashMap *textsToReplace;
+
+  HashSet *allComptimeFuncDefSet;
+}
+ComptimeFeatures;
+
+//MARK: SourceIndexer
+typedef struct SourceIndexer
+{
+  ImportedFiles importedFiles;
+
+  ComptimeFeatures comptimeFeatures;
+
+  HeapArray<SourceScope*> allScopes;
+  SourceScope *rootScope;
+
+  HeapArray<VarDef> allFileVarDef;
+  HeapArray<IdentifiedRef> allFileFuncCalls;
+  HeapArray<ComptimeCallRef> allFileComptimeCalls;
+  HeapArray<IdentifiedRef> allFileVarRefs;
+
+  // HashSet *allRootDefs;
+  HashSet *allDefIdentifiers;
+  // HashSet *allRefs;
+
+  Dependencies dependencies;
+
+  HashSet *allExportedDefsSet;
+}
+SourceIndexer;
 
 SourceIndexer *SourceIndexer__create(NodePos inStartPos, NodePos inEndPos);
 void SourceIndexer__free(SourceIndexer **self);
@@ -33,6 +84,7 @@ int SourceIndexer__addEnumScope(SourceIndexer *self, const char *inTypeName, Nod
 int SourceIndexer__addUnionScope(SourceIndexer *self, const char *inTypeName, NodePos inStartPos, NodePos inEndPos);
 int SourceIndexer__addTypedefScope(SourceIndexer *self, const char *inTypeName, NodePos inStartPos, NodePos inEndPos);
 void SourceIndexer__computeScopesHierarchy(SourceIndexer *self);
+void SourceIndexer__computeDependencies(SourceIndexer *self);
 
 int SourceIndexer__addVarDecl(SourceIndexer *self, const char *inVarName, const char *inVarType, int inPtrLvl, NodePos inStartPos, NodePos inEndPos);
 int SourceIndexer__addFunCallRef(SourceIndexer *self, const char *inFuncCallName, NodePos inStartPos, NodePos inEndPos);
@@ -62,4 +114,6 @@ void SourceIndexer__debugScopeTree(SourceIndexer *self, const char* inBaseDir, S
 
 
 int SourceIndexer__hasMainFunction(const SourceIndexer *self);
+
+int SourceIndexer__require(const SourceIndexer *self, const SourceIndexer *other);
 

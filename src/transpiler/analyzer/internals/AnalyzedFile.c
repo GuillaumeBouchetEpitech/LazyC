@@ -1,22 +1,12 @@
 
 #include "./AnalyzedFile.h"
 
-
-// #include "./SourceAnalyzer.h"
-
 #include "./parser/SourceParser.h"
 #include "stdlib/collections/HashMap.h"
-// #include "stdlib/collections/HashSet.h"
-// #include "stdlib/collections/PointerHeapArray.h"
-// #include "stdlib/filesystem/readFile.h"
 #include "stdlib/filesystem/pathUtils.h"
 #include "stdlib/strings/trimStr.h"
 #include "stdlib/strings/replaceAll2.h"
 
-#include "stdlib/time/StopWatch.h"
-
-
-// #include <dirent.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,7 +17,6 @@
 // forward declaration(s)
 int AnalyzedFile__queryAll(AnalyzedFile *self, SourceParser *inParser);
 int AnalyzedFile__queryVarRef(AnalyzedFile *self, SourceParser *inParser);
-int AnalyzedFile__queryComptimeComments(AnalyzedFile *self, SourceParser *inParser);
 
 //MARK: AnalyzedFile_create
 AnalyzedFile *AnalyzedFile__create(SourceParser *inParser, const char *inFilepath)
@@ -68,14 +57,18 @@ AnalyzedFile *AnalyzedFile__create(SourceParser *inParser, const char *inFilepat
     return NULL;
   }
 
-  if (AnalyzedFile__queryAll(analyzedFile, inParser) != 0 ||
-      AnalyzedFile__queryVarRef(analyzedFile, inParser) != 0 ||
-      AnalyzedFile__queryComptimeComments(analyzedFile, inParser) != 0) {
+  if (
+    AnalyzedFile__queryAll(analyzedFile, inParser) != 0 ||
+    AnalyzedFile__queryVarRef(analyzedFile, inParser) != 0
+  ) {
     AnalyzedFile__free(&analyzedFile);
     return NULL;
   }
 
   SourceIndexer__computeScopesHierarchy(analyzedFile->indexer);
+  SourceIndexer__computeDependencies(analyzedFile->indexer);
+
+  analyzedFile->isRelevant = 0;
 
   return analyzedFile;
 }
@@ -189,12 +182,17 @@ const char* k_queryAll_str = "\n"
   "  ) @definition.function\n"
   "\n"
   "\n"
+  "(comment) @comment\n"
+  "\n"
   "\n";
 
 //MARK: queryAll
 int AnalyzedFile__queryAll(AnalyzedFile *self, SourceParser *inParser)
 {
   const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
+
+  const char* k_patternStr = "///comptime-lazy-c:";
+  const unsigned int k_patternLen = strlen(k_patternStr);
 
   TSQuery* queryA = SourceParser__parseQuery(inParser, "queryA", k_queryAll_str);
 
@@ -238,7 +236,9 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, SourceParser *inParser)
 
           free(absolutePath);
         }
-        else {
+        else
+        {
+          // need to be resolved against the provided include-path
           SourceIndexer__addRawImport(self->indexer, tmpContent);
         }
 
@@ -290,8 +290,8 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, SourceParser *inParser)
         strcmp(cursor->allNodes[0].captureName.data, "definition.struct") == 0 ||
         strcmp(cursor->allNodes[0].captureName.data, "definition.enum") == 0 ||
         strcmp(cursor->allNodes[0].captureName.data, "definition.union") == 0 ||
-        strcmp(cursor->allNodes[0].captureName.data, "definition.typedef") == 0 ||
-        strcmp(cursor->allNodes[0].captureName.data, "definition.struct.anon") == 0
+        strcmp(cursor->allNodes[0].captureName.data, "definition.typedef") == 0 //||
+        // strcmp(cursor->allNodes[0].captureName.data, "definition.struct.anon") == 0
       )
     ) {
 
@@ -299,7 +299,7 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, SourceParser *inParser)
       const NodeData* exportedNode = HashMap__get(cursor->captureMap, "exported");
 
       {
-        printf(" -{STRUCT?}-> {%s}\n", cursor->allNodes[0].captureName.data);
+        // printf(" -{STRUCT?}-> {%s}\n", cursor->allNodes[0].captureName.data);
 
         char* tmpName = NULL;
         if (nameNode)
@@ -308,7 +308,7 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, SourceParser *inParser)
           const int strLen = (nameNode->endPos.index - nameNode->startPos.index);
           tmpName = strndup(pStrData, strLen);
 
-          printf(" -----> { %s }\n", tmpName);
+          // printf(" -----> { %s }\n", tmpName);
 
           if (self->fileType == SOURCE_H || (self->fileType == SOURCE_LC && exportedNode != NULL))
           {
@@ -332,10 +332,10 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, SourceParser *inParser)
         {
           SourceIndexer__addTypedefScope(self->indexer, tmpName, cursor->allNodes[0].startPos, cursor->allNodes[0].endPos);
         }
-        else if (strcmp(cursor->allNodes[0].captureName.data, "definition.struct.anon") == 0)
-        {
-          SourceIndexer__addStructScope(self->indexer, NULL, cursor->allNodes[0].startPos, cursor->allNodes[0].endPos);
-        }
+        // else if (strcmp(cursor->allNodes[0].captureName.data, "definition.struct.anon") == 0)
+        // {
+        //   SourceIndexer__addStructScope(self->indexer, NULL, cursor->allNodes[0].startPos, cursor->allNodes[0].endPos);
+        // }
 
         free(tmpName);
       }
@@ -441,6 +441,103 @@ int AnalyzedFile__queryAll(AnalyzedFile *self, SourceParser *inParser)
 
       free(tmpName);
     }
+    else if (
+      (self->fileType == SOURCE_LC) &&
+      strcmp(cursor->allNodes[0].captureName.data, "comment") == 0
+    ) {
+
+      NodeData* mainNode = HashMap__get(cursor->captureMap, "comment");
+
+      const char* nameStr = parsedFileContent + mainNode->startPos.index;
+      const unsigned int nameSize = mainNode->endPos.index - mainNode->startPos.index;
+
+      if (
+        nameSize < k_patternLen ||
+        strncmp(nameStr, k_patternStr, k_patternLen) != 0
+      ) {
+        continue;
+      }
+
+      char* tmpContent = strndup(nameStr, nameSize);
+
+      // printf(" -{COMMENT}-> \"%s\"\n", tmpContent);
+      // printf("   -{IS-COMPTIME!!!}-> --|%s|--\n", tmpContent + k_patternLen);
+
+      const char* commandDblQuoteStart = strchr(tmpContent + k_patternLen, '\"');
+      const char* commandDblQuoteEnd = strchr(commandDblQuoteStart + 1, '\"');
+
+      const char* commandStr = commandDblQuoteStart + 1;
+      const unsigned int commandLen = (int)(commandDblQuoteEnd - (commandDblQuoteStart + 1));
+
+      char* tmpCmdStr = strndup(commandStr, commandLen);
+
+      // printf("     -{CMD}-> --|%s|--\n", tmpCmdStr);
+
+      // TODO: hashmap with
+      if (strcmp(tmpCmdStr, "text-replace") == 0)
+      {
+        // printf("       -{TEXT-REPLACE}-\n");
+
+        const char* arg1DblQuoteStart = strchr(commandDblQuoteEnd + 1, '\"');
+        const char* arg1DblQuoteEnd = strchr(arg1DblQuoteStart + 1, '\"');
+        const char* arg2DblQuoteStart = strchr(arg1DblQuoteEnd + 1, '\"');
+        const char* arg2DblQuoteEnd = strchr(arg2DblQuoteStart + 1, '\"');
+
+        const char* arg1Str = arg1DblQuoteStart + 1;
+        const unsigned int arg1Len = (int)(arg1DblQuoteEnd - (arg1DblQuoteStart + 1));
+
+        const char* arg2Str = arg2DblQuoteStart + 1;
+        const unsigned int arg2Len = (int)(arg2DblQuoteEnd - (arg2DblQuoteStart + 1));
+
+        char* tmpArg1Str = strndup(arg1Str, arg1Len);
+        char* tmpArg2Str = strndup(arg2Str, arg2Len);
+
+        // printf(" -> arg1=%s\n", tmpArg1Str);
+        // printf(" -> arg2=%s\n", tmpArg2Str);
+
+        SourceIndexer__addComptimeTextToReplace(self->indexer, tmpArg1Str, tmpArg2Str);
+
+        free(tmpArg2Str);
+        free(tmpArg1Str);
+      }
+      else if (strcmp(tmpCmdStr, "resolve-includes") == 0)
+      {
+        // printf("       -{RESOLVE-INCLUDE}-\n");
+
+        const char* arg1DblQuoteStart = strchr(commandDblQuoteEnd + 1, '\"');
+        const char* arg1DblQuoteEnd = strchr(arg1DblQuoteStart + 1, '\"');
+
+        const char* arg1Str = arg1DblQuoteStart + 1;
+        const unsigned int arg1Len = (int)(arg1DblQuoteEnd - (arg1DblQuoteStart + 1));
+
+        char* tmpArg1Str = strndup(arg1Str, arg1Len);
+
+        // printf(" -> arg1=%s\n", tmpArg1Str);
+
+        StringData newData = String__replaceAll2(tmpArg1Str, "*", "");
+
+        if (
+          strcmp(newData.data, "int") != 0 &&
+          strcmp(newData.data, "float") != 0
+        ) {
+
+          // printf("       -{RESOLVE-INCLUDE}-> %s\n", tmpArg1Str);
+
+          SourceIndexer__addComptimeTypeToResolve(self->indexer, tmpArg1Str);
+        }
+
+        free(newData.data);
+        free(tmpArg1Str);
+      }
+      // else if (strcmp(tmpCmdStr, "resolve-type") == 0)
+      // {
+      //   // printf("       -{RESOLVE-TYPE}-\n");
+      // }
+
+      free(tmpCmdStr);
+
+      free(tmpContent);
+    }
   }
 
   free(currDir);
@@ -486,133 +583,6 @@ int AnalyzedFile__queryVarRef(AnalyzedFile *self, SourceParser *inParser)
   return 0;
 }
 
-const char* k_queryComptimeComments_str = "\n"
-  "\n"
-  "(comment) @comment\n"
-  "\n";
-
-//MARK: queryComptimeComments
-int AnalyzedFile__queryComptimeComments(AnalyzedFile *self, SourceParser *inParser)
-{
-  if (self->fileType != SOURCE_LC)
-  {
-    // printf(" IS NOT A LC FILE -> {COMPTIME-COMMENt}\n");
-    return 0;
-  }
-
-  const char* k_patternStr = "///comptime-lazy-c:";
-  const unsigned int k_patternLen = strlen(k_patternStr);
-
-  // printf("k_queryStr: %s\n", k_queryStr);
-
-  const char* parsedFileContent = SourceParsedFile__getFileContent(self->parsedFile);
-
-  TSQuery* queryC = SourceParser__parseQuery(inParser, "queryC", k_queryComptimeComments_str);
-
-  QueryMatchData* newMatchData = SourceParsedFile__query(self->parsedFile, queryC);
-
-  for (QueryMatchData* cursor = newMatchData; cursor; cursor = cursor->next)
-  {
-    NodeData* mainNode = HashMap__get(cursor->captureMap, "comment");
-    if (!mainNode) {
-      continue;
-    }
-
-    const char* nameStr = parsedFileContent + mainNode->startPos.index;
-    const unsigned int nameSize = mainNode->endPos.index - mainNode->startPos.index;
-
-    if (
-      nameSize < k_patternLen ||
-      strncmp(nameStr, k_patternStr, k_patternLen) != 0
-    ) {
-      continue;
-    }
-
-    char* tmpContent = strndup(nameStr, nameSize);
-
-    // printf(" -{COMMENT}-> \"%s\"\n", tmpContent);
-    // printf("   -{IS-COMPTIME!!!}-> --|%s|--\n", tmpContent + k_patternLen);
-
-    const char* commandDblQuoteStart = strchr(tmpContent + k_patternLen, '\"');
-    const char* commandDblQuoteEnd = strchr(commandDblQuoteStart + 1, '\"');
-
-    const char* commandStr = commandDblQuoteStart + 1;
-    const unsigned int commandLen = (int)(commandDblQuoteEnd - (commandDblQuoteStart + 1));
-
-    char* tmpCmdStr = strndup(commandStr, commandLen);
-
-    // printf("     -{CMD}-> --|%s|--\n", tmpCmdStr);
-
-    // TODO: hashmap with
-    if (strcmp(tmpCmdStr, "text-replace") == 0)
-    {
-      // printf("       -{TEXT-REPLACE}-\n");
-
-      const char* arg1DblQuoteStart = strchr(commandDblQuoteEnd + 1, '\"');
-      const char* arg1DblQuoteEnd = strchr(arg1DblQuoteStart + 1, '\"');
-      const char* arg2DblQuoteStart = strchr(arg1DblQuoteEnd + 1, '\"');
-      const char* arg2DblQuoteEnd = strchr(arg2DblQuoteStart + 1, '\"');
-
-      const char* arg1Str = arg1DblQuoteStart + 1;
-      const unsigned int arg1Len = (int)(arg1DblQuoteEnd - (arg1DblQuoteStart + 1));
-
-      const char* arg2Str = arg2DblQuoteStart + 1;
-      const unsigned int arg2Len = (int)(arg2DblQuoteEnd - (arg2DblQuoteStart + 1));
-
-      char* tmpArg1Str = strndup(arg1Str, arg1Len);
-      char* tmpArg2Str = strndup(arg2Str, arg2Len);
-
-      // printf(" -> arg1=%s\n", tmpArg1Str);
-      // printf(" -> arg2=%s\n", tmpArg2Str);
-
-      SourceIndexer__addComptimeTextToReplace(self->indexer, tmpArg1Str, tmpArg2Str);
-
-      free(tmpArg2Str);
-      free(tmpArg1Str);
-    }
-    else if (strcmp(tmpCmdStr, "resolve-includes") == 0)
-    {
-      // printf("       -{RESOLVE-INCLUDE}-\n");
-
-      const char* arg1DblQuoteStart = strchr(commandDblQuoteEnd + 1, '\"');
-      const char* arg1DblQuoteEnd = strchr(arg1DblQuoteStart + 1, '\"');
-
-      const char* arg1Str = arg1DblQuoteStart + 1;
-      const unsigned int arg1Len = (int)(arg1DblQuoteEnd - (arg1DblQuoteStart + 1));
-
-      char* tmpArg1Str = strndup(arg1Str, arg1Len);
-
-      // printf(" -> arg1=%s\n", tmpArg1Str);
-
-      StringData newData = String__replaceAll2(tmpArg1Str, "*", "");
-
-      if (
-        strcmp(newData.data, "int") != 0 &&
-        strcmp(newData.data, "float") != 0
-      ) {
-
-        // printf("       -{RESOLVE-INCLUDE}-> %s\n", tmpArg1Str);
-
-        SourceIndexer__addComptimeTypeToResolve(self->indexer, tmpArg1Str);
-      }
-
-      free(newData.data);
-      free(tmpArg1Str);
-    }
-    // else if (strcmp(tmpCmdStr, "resolve-type") == 0)
-    // {
-    //   // printf("       -{RESOLVE-TYPE}-\n");
-    // }
-
-    free(tmpCmdStr);
-
-    free(tmpContent);
-  }
-
-  QueryMatchData__free(&newMatchData);
-  return 0;
-}
-
 //MARK: getFilepath
 const char *AnalyzedFile__getFilepath(const AnalyzedFile *self)
 {
@@ -641,4 +611,3 @@ void AnalyzedFile__debugScopeTree(const AnalyzedFile *self, const char* inBaseDi
 {
   SourceIndexer__debugScopeTree(self->indexer, inBaseDir, inStreamWriter);
 }
-

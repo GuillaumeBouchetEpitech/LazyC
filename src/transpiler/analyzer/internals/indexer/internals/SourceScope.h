@@ -22,17 +22,18 @@ ScopeType;
 
 typedef struct SourceScope
 {
+  char *funcName; // function only?
   struct SourceScope *parentScope;
   HeapArray<SourceScope*> allChildrenScopes;
+
   ScopeType scopeType;
   NodePos startPos;
   NodePos endPos;
-  // PointerHeapArray *allStructDef;
+
   HeapArray<VarDef> allVarDef;
   HeapArray<IdentifiedRef> allFuncCalls;
   HeapArray<ComptimeCallRef> allComptimeCalls;
   HeapArray<IdentifiedRef> allVarRefs;
-  char *funcName; // function only?
 }
 SourceScope;
 

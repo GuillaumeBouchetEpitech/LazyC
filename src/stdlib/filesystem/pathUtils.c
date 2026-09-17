@@ -1,4 +1,6 @@
 
+#include "./pathUtils.h"
+
 #include "stdlib/strings/StringBuffer.h"
 
 #include <stdarg.h>

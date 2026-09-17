@@ -1,5 +1,5 @@
 
-#include "panic.h"
+#include "./panic.h"
 
 #include <signal.h>
 #include <stdio.h>

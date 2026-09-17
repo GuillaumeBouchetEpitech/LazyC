@@ -1,6 +1,29 @@
+
 IMPORTS (total: 0)
+
 TEXTS_TO_REPLACE (total: 0)
+
 TYPES_TO_RESOLVE (total: 0)
+
+TOTAL EXPORTED (total: 0)
+
+DEP---ALL-FUNCTIONS (total: 1)
+ -> dep-func=main
+
+DEP---ALL-TYPES (total: 0)
+
+DEP---PROVIDED-FUNCTIONS (total: 0)
+
+DEP---PROVIDED-TYPES (total: 0)
+
+DEP---REQUIRE-FUNCTIONS (total: 1)
+ -> dep-func=printf
+
+DEP---REQUIRE-TYPES (total: 2)
+ -> dep-type=char
+ -> dep-type=int
+
+ALL SCOPES
 |--- [L01_C00]->[L09_C00] [ROOT_SCOPE]
 |---|--- [L04_C00]->[L08_C01] [FUNC_SCOPE] ---> "main"
 =-=-=-=- => [L04_C09]->[L04_C17]  -> VarDef: type="int", ptrLvl="0", name="argc"
