@@ -5,6 +5,7 @@ cmake-build.*
 
 bin
 output
+output-first
 output-second
 .generated
 *.debug

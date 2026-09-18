@@ -85,7 +85,7 @@ echo "# RUN #"
 echo "#######"
 echo ""
 
-rm -rf "${PWD}/output-second"
+rm -rf "${PWD}/output-first"
 
 # cleanup ".generated" folder(s)
 find ./src/ -name .generated -type d -type d
@@ -94,7 +94,7 @@ find ./src/ -name .generated -type d -type d -exec bash -c ' rm -rf "{}" ' \;
 # # gdb -ex run --args ./output/bin/exec \
 # #   "--base-dir=${PWD}/src/" \
 # #   "--input-file=${PWD}/src/main.c" \
-# #   "--output-dir=${PWD}/output-second" \
+# #   "--output-dir=${PWD}/output-first" \
 # #   "--add-include-path=${PWD}/third_parties/tree-sitter-lazy-c/bindings/c" \
 # #   "--add-library-path=${PWD}/third_parties/tree-sitter-lazy-c/build-native/tree-sitter-lazy_c.a" \
 # #   "--add-include-path=${PWD}/third_parties/tree-sitter/lib/include" \
@@ -104,7 +104,7 @@ find ./src/ -name .generated -type d -type d -exec bash -c ' rm -rf "{}" ' \;
 ./output/bin/exec \
   "--base-dir=${PWD}/src/" \
   "--input-file=${PWD}/src/main.c" \
-  "--output-dir=${PWD}/output-second" \
+  "--output-dir=${PWD}/output-first" \
   "--add-include-path=${PWD}/third_parties/tree-sitter-lazy-c/bindings/c" \
   "--add-library-path=${PWD}/third_parties/tree-sitter-lazy-c/build-native/tree-sitter-lazy_c.a" \
   "--add-include-path=${PWD}/third_parties/tree-sitter/lib/include" \
@@ -117,11 +117,13 @@ echo "# BUILD UNIT-TESTS #"
 echo "####################"
 echo ""
 
+rm -rf "${PWD}/output-second"
+
 # cleanup ".generated" folder(s)
 find ./src/ -name .generated -type d -type d
 find ./src/ -name .generated -type d -type d -exec bash -c ' rm -rf "{}" ' \;
 
-# ./output-second/bin/exec \
+# ./output-first/bin/exec \
 #   "--base-dir=${PWD}/src/" \
 #   "--input-file=${PWD}/src/main.tests.c" \
 #   "--output-dir=${PWD}/output-second-test" \
@@ -131,7 +133,7 @@ find ./src/ -name .generated -type d -type d -exec bash -c ' rm -rf "{}" ' \;
 #   "--add-library-path=${PWD}/third_parties/tree-sitter/libtree-sitter.a" \
 #   --handle-tests=1 \
 #   || exit 1
-./output-second/bin/exec \
+./output-first/bin/exec \
   "--base-dir=${PWD}/src/" \
   "--input-file=${PWD}/src/main.tests.c" \
   "--output-dir=${PWD}/output-second" \
