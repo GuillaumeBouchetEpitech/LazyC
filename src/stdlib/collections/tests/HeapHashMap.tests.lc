@@ -1,6 +1,8 @@
 
 #include "../HeapHashMap.lc"
 
+#include "./testTypes.tests.lc"
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,9 +17,6 @@
 //
 //
 
-export struct TestStruct {
-  int value;
-};
 
 static void HeapHashMap_can_create_pre_allocated_int() {
   HeapHashMap<int> testHeapHashMap = HeapHashMap<int>::preAllocate(32);

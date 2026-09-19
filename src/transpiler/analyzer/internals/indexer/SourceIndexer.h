@@ -7,8 +7,7 @@
 #include "./internals/IdentifiedRef.h"
 #include "./internals/ComptimeCallRef.h"
 #include "./internals/SourceScope.h"
-// #include "./internals/Dependencies.lc"
-#include "./internals/Dependencies.h"
+#include "./internals/Dependencies.lc"
 
 #include "stdlib/core/panic.h"
 #include "stdlib/collections/HashMap.h"

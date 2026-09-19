@@ -1266,6 +1266,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
   }
 
     {
+      // add the extra "#include" (<- comptime generated files)
       HashSet* tmpSet = HashMap__get(self->allExtraIncludesPerFiles, filepath);
       if (tmpSet && HashSet__get_totalItems(tmpSet) > 0)
       {
@@ -1534,6 +1535,44 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
       StreamWriter__write(streamWriter, k_str, strlen(k_str));
     }
 
+
+    {
+      // add the extra "#include" (<- comptime generated files)
+      HashSet* tmpSet = HashMap__get(self->allExtraIncludesPerFiles, filepath);
+      if (tmpSet && HashSet__get_totalItems(tmpSet) > 0)
+      {
+        char* outFolderPath = Path__dirname(filepath);
+
+        printf(" GOT GENERATED STUFF: %s\n", filepath);
+
+        unsigned int totalKeys = 0;
+        char** allkeys = HashSet__get_allKeys(tmpSet, &totalKeys);
+
+        for (unsigned int ii = 0; ii < totalKeys; ++ii)
+        {
+          const char* tmpFilepath = allkeys[ii];
+          char* relPath = Path__relative(outFolderPath, tmpFilepath);
+
+          printf("  -> IS GENERATED\n");
+          printf("    -> caller: %s\n", filepath);
+          printf("    -> callee: %s\n", tmpFilepath);
+          printf("    -> relative: %s\n", relPath);
+
+          const int bufSize = strlen(relPath) + 32;
+          char* tmpBuf = calloc(bufSize, sizeof(char));
+
+          snprintf(tmpBuf, bufSize, "\n#include \"%s\"\n\n", relPath);
+          StreamWriter__write(streamWriter, tmpBuf, strlen(tmpBuf));
+
+          free(tmpBuf);
+          free(relPath);
+        }
+
+        free(allkeys);
+        free(outFolderPath);
+      }
+    }
+
     {
       const HashSet* typesToResolve = SourceIndexer__getComptimeTypesToResolve(inAnalyzedFile->indexer);
 
@@ -1634,10 +1673,9 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
   //
 
 
-  ///MARK: apply extra includes
+  ///MARK: text-replace
   {
-
-
+    // apply the comptime comment text-replace
     HashSet* tmpSet = HashMap__get(self->allExtraIncludesPerFiles, filepath);
     if (tmpSet && HashSet__get_totalItems(tmpSet) > 0)
     {
@@ -1703,6 +1741,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
             {
               char* pFileContent;
               unsigned int fileSize;
+              // TODO: this is slow
               if (readFile(outFilepath, &pFileContent, &fileSize) < 0)
               {
                 // TODO: need a goto to a failure_return
@@ -1732,6 +1771,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
 
               free(allItems);
 
+              // TODO: this is slow
               if (writeFile(outFilepath, inputBuffer, inputLen) < 0)
               {
                 // TODO: need a goto to a failure_return
@@ -1748,6 +1788,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
             {
               char* pFileContent;
               unsigned int fileSize;
+              // TODO: this is slow
               if (readFile(outHeaderFilepath, &pFileContent, &fileSize) < 0)
               {
                 // TODO: need a goto to a failure_return
@@ -1777,6 +1818,7 @@ static int _Transpiler__processFile(Transpiler* self, const AnalyzedFile* inAnal
 
               free(allItems);
 
+              // TODO: this is slow
               if (writeFile(outHeaderFilepath, inputBuffer, inputLen) < 0)
               {
                 // TODO: need a goto to a failure_return

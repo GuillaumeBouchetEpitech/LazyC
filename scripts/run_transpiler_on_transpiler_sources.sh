@@ -36,6 +36,11 @@ echo ""
 #   exit 1
 # fi
 
+# CURR_TRANSPILER=./_tmp/v0.0.1-the-c-prototype/bin/exec
+# CURR_TRANSPILER=./_tmp/v0.0.2-dirty-100x-faster-prototype/output/bin/exec
+CURR_TRANSPILER=./_tmp/v0.0.3-refactored-prototype/output/bin/exec
+# CURR_TRANSPILER=./last-known-good/exec
+
 echo ""
 echo "####################"
 echo "# BUILD TRANSPILER #"
@@ -69,7 +74,7 @@ find ./src/ -name .generated -type d -type d -exec bash -c ' rm -rf "{}" ' \;
 #   || exit 1
 
 # ./_tmp/c-transpiler/bin/exec \
-./_tmp/v0.0.2-dirty-100x-faster-prototype/output/bin/exec \
+$CURR_TRANSPILER \
   "--base-dir=${PWD}/src/" \
   "--input-file=${PWD}/src/main.c" \
   "--output-dir=${PWD}/output" \

@@ -1,0 +1,70 @@
+
+// #include "stdlib/collections/HeapHashSet.lc"
+
+// #include <stdlib.h>
+
+// export struct Dependencies
+// {
+//   HeapHashSet allFunctions;
+//   HeapHashSet allTypes;
+//   HeapHashSet provideFunctions;
+//   HeapHashSet provideTypes;
+//   HeapHashSet requireFunctions;
+//   HeapHashSet requireTypes;
+// };
+
+// export Dependencies Dependencies__create()
+// {
+//   Dependencies self;
+//   self.allFunctions = HeapHashSet__preAllocate(32);
+//   self.allTypes = HeapHashSet__preAllocate(32);
+//   self.provideFunctions = HeapHashSet__preAllocate(32);
+//   self.provideTypes = HeapHashSet__preAllocate(32);
+//   self.requireFunctions = HeapHashSet__preAllocate(32);
+//   self.requireTypes = HeapHashSet__preAllocate(32);
+//   return self;
+// }
+
+// export void Dependencies__free(Dependencies* self)
+// {
+//   HeapHashSet__free(&self->allFunctions);
+//   HeapHashSet__free(&self->allTypes);
+//   HeapHashSet__free(&self->provideFunctions);
+//   HeapHashSet__free(&self->provideTypes);
+//   HeapHashSet__free(&self->requireFunctions);
+//   HeapHashSet__free(&self->requireTypes);
+// }
+
+// export int Dependencies__require(const Dependencies* self, const Dependencies* other)
+// {
+//   if (HeapHashSet__get_totalItems(&self->requireFunctions) > 0) {
+//     unsigned int totalKeys = 0;
+//     char** allKeys = HeapHashSet__get_allKeys(&self->requireFunctions, &totalKeys);
+
+//     for (unsigned int ii = 0; ii < totalKeys; ++ii) {
+//       if (HeapHashSet__contains(&other->provideFunctions, allKeys[ii]) != 0) {
+//         free(allKeys);
+//         return 1;
+//       }
+//     }
+
+//     free(allKeys);
+//   }
+
+//   if (HeapHashSet__get_totalItems(&self->requireTypes) > 0) {
+//     unsigned int totalKeys = 0;
+//     char** allKeys = HeapHashSet__get_allKeys(&self->requireTypes, &totalKeys);
+
+//     for (unsigned int ii = 0; ii < totalKeys; ++ii) {
+//       if (HeapHashSet__contains(&other->provideTypes, allKeys[ii]) != 0) {
+//         free(allKeys);
+//         return 1;
+//       }
+//     }
+
+//     free(allKeys);
+//   }
+
+//   return 0;
+// }
+
